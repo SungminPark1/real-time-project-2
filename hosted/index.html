@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="/assets/style.css">
+    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/assets/bundle.js" ></script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="game__container">
+        <div class="canvas__container">
+          <canvas id='main' width="500" height="500"></canvas>
+          <div class="canvas__overlay">
+            <h1 class="title">Bombs Away</h1>
+            <p class="username">Username: <input id="username" type="text"/></p>
+            <p class="room__name">*Room Name: <input id="roomname" type="text"/></p>
+            <button class="change__room">Create/Join Room</button>
+          </div>
+        </div>
+        <div class="sidebar">
+          <div class="room__infos">
+            <h1>Rooms</h1>
+            <div class="room__list"></div>
+            <button class="refresh__room">Refresh List</button>
+          </div>
+          <div class="scoreboard">
+            <h1>Scores</h1>
+            <div class="score__list">
+            </div>
+          </div>
+        </div>
+      </div>
+      <h1>Instruction</h1>
+      <div class="instruction__container">
+        <div class="control__container">
+          <h3>Controls</h3>
+          <p>Movement: WASD</p>
+          <p>Place Bomb: Spacebar (usable alive and dead)</p>
+        </div>
+        <div class="goal__container">
+          <h3>Goal/Tips</h3>
+          <p>The growing transparent grey circles indicates the time left to get out of the explosion.</p> 
+          <p>Only the red circles are harmful.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

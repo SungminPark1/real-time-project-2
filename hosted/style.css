@@ -1,0 +1,138 @@
+body {
+  background-color: #DDD;
+}
+
+h1 {
+  text-align: center;
+  font-size: 24px;
+}
+.wrapper {
+  margin: 0 auto;
+  width: 80%;
+}
+
+.game__container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.canvas__container {
+  position: relative;
+  height: 500px;
+}
+
+.sidebar {
+  position: relative;
+  margin: 0 0 0 10px;
+  height: 496px;
+  width: 200px;
+  border: solid 2px black;
+  background-color: white;
+}
+
+.title {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  font-size: 30px;
+}
+
+.username, .room__name {
+  position: absolute;
+  right: 34%;
+  font-size: 14px;
+}
+
+.username {
+  top: 50%;
+}
+
+.room__name {
+  top: 60%;
+}
+
+input {
+  height: 30px;
+  width: 150px;
+  background-color: #DDD;
+}
+
+.change__room {
+  position: absolute;
+  top: 75%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  height: 40px;
+  width: 150px;
+  font-size: 14px;
+}
+
+.refresh__room {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 40px;
+  width: 100%;
+  font-size: 16px;
+}
+
+.room__infos {
+  width: 200px;
+}
+
+.room__container {
+  width: 150px;
+  margin: 10px auto;
+  padding: 10px 5px;
+  border: solid 1px black
+}
+
+.room__container h2 {
+  margin: 0 0 0 5px;
+  font-size: 16px;
+}
+
+.room__container p {
+  margin: 0 0 0 15px;
+}
+
+.scoreboard {
+  display: none;
+  width: 200px;
+}
+
+.score__list p {
+  margin: 0 0 0 15px;
+}
+
+.score__list .bold {
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+#main {
+  z-index: 0;
+  background-color: white;
+}
+
+.instruction__container {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.control__container {
+  width: 25%;
+  padding: 10px 2%;
+  background-color: white;
+}
+
+.goal__container {
+  width: 65%;
+  padding: 10px 2%;
+  margin-left: 2%;
+  background-color: white;
+}

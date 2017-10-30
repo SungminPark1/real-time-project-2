@@ -1,3 +1,4 @@
+const xxh = require('xxhashjs');
 const Game = require('./game/game.js');
 
 const gameRooms = {};
@@ -20,10 +21,12 @@ const updateRoom = (room, io) => {
 // else they join the existing room
 const onJoined = (sock, io) => {
   const socket = sock;
-  socket.on('join', (data) => {
+  socket.on('join', () => {
+    const hash = xxh.h32(`${socket.id}${new Date().getTime()}`, 0xCAFEBABE).toString(16);
+
     socket.join('lobby');
     socket.room = 'lobby';
-    socket.name = data.user.name;
+    socket.hash = hash;
 
     // emit back room names and player count
     const keys = Object.keys(gameRooms);
@@ -39,6 +42,7 @@ const onJoined = (sock, io) => {
       };
     }
 
+    socket.emit('hash', { hash });
     socket.emit('roomList', rooms);
   });
 
@@ -47,7 +51,6 @@ const onJoined = (sock, io) => {
       socket.leave('lobby');
       socket.join(data.room);
       socket.room = data.room;
-      socket.name = data.user.name;
 
       gameRooms[data.room] = new Game(data.room);
       gameRooms[data.room].addPlayer(data.user);
@@ -72,12 +75,10 @@ const onJoined = (sock, io) => {
           return;
         }
       }
-      
+
       socket.leave('lobby');
       socket.join(data.room);
       socket.room = data.room;
-
-      socket.name = data.user.name;
 
       gameRooms[data.room].addPlayer(data.user);
 
@@ -116,13 +117,13 @@ const onMsg = (sock) => {
   socket.on('updatePlayer', (user) => {
     const room = gameRooms[socket.room];
 
-    room.players[user.name].update(user);
+    room.players[socket.hash].update(user);
   });
 
   socket.on('togglePlayerReady', (user) => {
     const room = gameRooms[socket.room];
 
-    room.players[user.name].toggleReady(user);
+    room.players[socket.hash].toggleReady(user);
   });
 };
 
@@ -139,7 +140,7 @@ const onDisconnect = (sock) => {
 
         // check if the game's room matches the socket's room
         if (game.room === socket.room) {
-          game.deletePlayer(socket.name);
+          game.deletePlayer(socket.hash);
 
           // deletes room if no players exist in it
           if (Object.keys(game.players).length === 0) {

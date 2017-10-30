@@ -2,20 +2,27 @@ const utils = require('../utils.js');
 
 class Player {
   constructor(user) {
+    this.hash = user.hash;
     this.name = user.name;
     this.pos = {
       x: 200 + utils.getRandomInt(100, 1),
       y: 200 + utils.getRandomInt(100, 1),
     };
-    this.radius = 20;
-    this.score = 0;
+    this.prevPos = { ...this.pos };
+    this.destPos = { ...this.pos };
     this.color = {
       r: utils.getRandomInt(151),
       g: utils.getRandomInt(256),
       b: utils.getRandomInt(256),
     };
+    this.radius = 20;
+    this.score = 0;
+
+    // game state related
     this.ready = false;
     this.dead = false;
+
+    // skill related
     this.placeBomb = false;
     this.cooldown = 0;
   }

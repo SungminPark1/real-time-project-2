@@ -22,11 +22,11 @@ class Game {
   }
 
   addPlayer(user) {
-    this.players[user.name] = new Player(user);
+    this.players[user.hash] = new Player(user);
   }
 
-  deletePlayer(name) {
-    delete this.players[name];
+  deletePlayer(hash) {
+    delete this.players[hash];
   }
 
   createBombs(dt) {
@@ -172,7 +172,7 @@ class Game {
     } else if (this.status === GAME_RESTARTING) {
       this.restarting();
     } else {
-      console.log('AHHHHHH');
+      console.log('AHHHHHH it broke...');
       this.restarting(true);
     }
   }

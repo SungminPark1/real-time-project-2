@@ -7,6 +7,8 @@ class Bomb {
       x: pos.x || utils.getRandomInt(19, 1) * 25,
       y: pos.y || utils.getRandomInt(19, 1) * 25,
     };
+    this.prevPos = { ...this.pos };
+    this.destPos = { ...this.pos };
     this.fuse = 2 + strength; // in sec
     this.radius = 0; // temp indication of when its about to explode
     this.exploding = false;

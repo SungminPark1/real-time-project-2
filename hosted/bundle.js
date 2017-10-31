@@ -20,6 +20,7 @@ var scoreboard = void 0;
 var scoreList = void 0;
 
 // game related vars
+var roomStatus = 'preparing';
 var players = {};
 var bombs = [];
 
@@ -41,26 +42,97 @@ var myKeys = {
   keydown: []
 };
 
-function clamp(val, min, max) {
+// returns an object { x: var, y: var }
+var lerpPos = function lerpPos(pos0, pos1, alpha) {
+  return {
+    x: (1 - alpha) * pos0.x + alpha * pos1.x,
+    y: (1 - alpha) * pos0.y + alpha * pos1.y
+  };
+};
+
+var clamp = function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
-}
+};
+
+var updateMovement = function updateMovement(status) {
+  var user = players[hash];
+  updated = false;
+  placeBomb = false;
+
+  user.prevPos = user.pos;
+
+  // movement check
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
+    user.destPos.y += -2;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
+    user.destPos.x += -2;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
+    user.destPos.y += 2;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
+    user.destPos.x += 2;
+    updated = true;
+  }
+
+  // skill check
+  if (status === 'started') {
+    if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
+      placeBomb = true;
+      updated = true;
+    }
+  }
+
+  user.alpha = updated ? user.alpha : 0.05;
+
+  // prevent player from going out of bound
+  user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);
+  user.destPos.y = clamp(user.destPos.y, user.radius, 500 - user.radius);
+
+  // console.log(user.pos, user.prevPos, user.destPos);
+  // if this client's user moves, send to server to update server
+  if (updated === true || user.pos.x !== user.destPos.x || user.pos.y !== user.destPos.y) {
+    socket.emit('updatePlayer', {
+      pos: user.pos,
+      prevPos: user.prevPos,
+      destPos: user.destPos,
+      placeBomb: placeBomb
+    });
+  }
+};
 
 // draw players
-var drawPlayers = function drawPlayers(user) {
-  var status = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'preparing';
+var drawPlayers = function drawPlayers() {
+  var status = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'preparing';
 
   var keys = Object.keys(players);
 
   for (var i = 0; i < keys.length; i++) {
     var player = players[keys[i]];
 
+    // lerp players
+    if (player.alpha < 1) {
+      player.alpha += 0.05;
+      // console.log(player.alpha);
+    }
+
+    player.pos = lerpPos(player.prevPos, player.destPos, player.alpha);
+
+    // prevent player from going out of bound
+    player.pos.x = clamp(player.pos.x, player.radius, 500 - player.radius);
+    player.pos.y = clamp(player.pos.y, player.radius, 500 - player.radius);
+
     // ignores this clients object
     if (keys[i] !== hash) {
-      scoreList.innerHTML += '<p>' + keys[i] + ': ' + player.score + '</p>';
+      scoreList.innerHTML += '<p>' + player.name + ': ' + player.score + '</p>';
       ctx.fillStyle = 'rgba(' + player.color.r + ', ' + player.color.g + ', ' + player.color.b + ', ' + (player.dead ? 0.25 : 1) + ')';
       ctx.strokeStyle = 'black';
+      ctx.save();
       if (status === 'preparing' && player.ready) {
-        ctx.save();
         ctx.shadowColor = '#00FF00';
         ctx.shadowBlur = 40;
         ctx.shadowOffsetX = 0;
@@ -76,9 +148,10 @@ var drawPlayers = function drawPlayers(user) {
   }
 
   // draw clients player
+  var user = players[hash];
   ctx.fillStyle = 'rgba(' + user.color.r + ',' + user.color.g + ',' + user.color.b + ', ' + (user.dead ? 0.25 : 1) + ')';
+  ctx.save();
   if (status === 'preparing' && user.ready) {
-    ctx.save();
     ctx.shadowColor = '#00FF00';
     ctx.shadowBlur = 40;
     ctx.shadowOffsetX = 0;
@@ -124,56 +197,10 @@ var drawText = function drawText(text, x) {
   ctx.fillText(text, x, y);
 };
 
-var update = function update(dt, status) {
-  updated = false;
-  placeBomb = false;
-
+var checkReady = function checkReady() {
   var user = players[hash];
 
-  // movement check
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.pos.y += -100 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.pos.x += -100 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.pos.y += 100 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.pos.x += 100 * dt;
-    updated = true;
-  }
-
-  // skill check
-  if (status === 'started') {
-    if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
-      placeBomb = true;
-      updated = true;
-    }
-  }
-
-  // prevent player from going out of bound
-  user.pos.x = clamp(user.pos.x, user.radius, 500 - user.radius);
-  user.pos.y = clamp(user.pos.y, user.radius, 500 - user.radius);
-
-  // if this client's user moves, send to server to update server
-  if (updated === true) {
-    socket.emit('updatePlayer', {
-      pos: {
-        x: user.pos.x,
-        y: user.pos.y
-      },
-      placeBomb: placeBomb
-    });
-  }
-};
-
-var checkReady = function checkReady(user) {
-  // emit only when current keypress is down and previous is up;
+  // emit only when current keypress is down and previous is up
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
     socket.emit('togglePlayerReady', {
       ready: !user.ready
@@ -181,38 +208,40 @@ var checkReady = function checkReady(user) {
   }
 };
 
-// called when server sends update update user pos?
-var handleUpdate = function handleUpdate(data) {
-  players = data.players;
-  bombs = data.bombs;
+// players can move and update ready status.
+var preparing = function preparing(status) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  updateMovement(status);
+  checkReady();
+  drawPlayers(status);
+  drawText('Waiting for Players to Ready', 60);
+  drawText('(spacebar to ready)', 170, 70, 20);
+};
+
+// players can move, place bombs and see bombs
+var started = function started(status) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  updateMovement(status);
+  drawPlayers(status);
+  drawBombs();
+};
+
+// handles the clients draw related functions
+var handleDraw = function handleDraw() {
   var user = players[hash];
   var userColor = 'rgb(' + user.color.r + ', ' + user.color.g + ', ' + user.color.b + ')';
 
   scoreList.innerHTML = '<p class="bold" style="text-decoration-color:' + userColor + '"; >' + user.name + ': ' + user.score + '</p>';
 
   // handle update based on game status
-  if (data.status === 'preparing') {
-    // players can move and update ready status.
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    update(data.dt, data.status);
-    checkReady(user);
-    drawPlayers(user, data.status);
-    drawText('Waiting for Players to Ready', 60);
-    drawText('(spacebar to ready)', 170, 70, 20);
-  } else if (data.status === 'started') {
-    // reset canvas and scoreboard
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // players can move, place bombs and see bombs
-    update(data.dt, data.status);
-    drawPlayers(user, data.status);
-    drawBombs();
-  } else if (data.status === 'restarting') {
+  if (roomStatus === 'preparing') {
+    preparing(roomStatus);
+  } else if (roomStatus === 'started') {
+    started(roomStatus);
+  } else if (roomStatus === 'restarting') {
     // freeze screen and loop back to start
-    user.pos = _extends({}, players[hash].pos);
-
     drawText('Restarting', 180);
   }
 
@@ -221,6 +250,52 @@ var handleUpdate = function handleUpdate(data) {
     previousKeyDown = true;
   } else {
     previousKeyDown = false;
+  }
+
+  window.requestAnimationFrame(handleDraw);
+};
+
+var updatePlayer = function updatePlayer(users) {
+  var keys = Object.keys(users);
+
+  // loop through players to update
+  for (var i = 0; i < keys.length; i++) {
+    var player = players[keys[i]];
+
+    // if player doesn't exist in players object - add player
+    // else if player exist and last update is less than server's - update the player
+    // else - do nothing
+    if (!player) {
+      players[keys[i]] = _extends({}, users[keys[i]]);
+    } else if (player && player.lastUpdate < users[keys[i]].lastUpdate) {
+      var updatedPlayer = users[keys[i]];
+
+      player.lastUpdate = updatedPlayer.lastUpdate;
+      player.prevPos = updatedPlayer.prevPos;
+      player.destPos = updatedPlayer.destPos;
+      player.dead = updatedPlayer.dead;
+      player.ready = updatedPlayer.ready;
+      player.placeBomb = updatedPlayer.placeBomb;
+      player.score = updatedPlayer.score;
+      player.alpha = 0.05;
+    }
+  }
+};
+
+// TODO:
+// reset player pos when status === 'restarting'
+// called when server sends update
+var handleUpdate = function handleUpdate(data) {
+  roomStatus = data.status;
+
+  updatePlayer(data.players);
+
+  bombs = data.bombs;
+};
+
+var removePlayer = function removePlayer(userHash) {
+  if (players[userHash]) {
+    delete players[userHash];
   }
 };
 
@@ -242,7 +317,8 @@ var setupSocket = function setupSocket() {
     roomInfo.style.display = 'none';
     scoreboard.style.display = 'block';
 
-    drawPlayers(players[hash]);
+    console.log(players);
+    window.requestAnimationFrame(handleDraw);
   });
 
   socket.on('roomList', function (data) {
@@ -258,6 +334,7 @@ var setupSocket = function setupSocket() {
     }
   });
 
+  socket.on('removePlayer', removePlayer);
   socket.on('usernameError', function (data) {
     username.style.border = 'solid 1px red';
     console.log(data.msg);

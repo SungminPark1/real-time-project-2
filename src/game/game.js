@@ -16,6 +16,7 @@ class Game {
     this.bombTimer = 2;
     this.currentTimer = this.bombTimer + 1;
     this.time = new Date().getTime();
+    this.lastUpdate = this.time;
     this.dt = 0;
 
     this.restart = 1;
@@ -44,15 +45,17 @@ class Game {
     this.bombs = this.bombs.filter(bomb => bomb.active);
   }
 
-  checkCollision(keys) {
+  // TO DO:
+  // move collisions functions to collision.js since each room has same collision check
+  bombCollision(playerKeys) {
     // loop through bombs
     for (let i = 0; i < this.bombs.length; i++) {
       const bomb = this.bombs[i];
 
       // check collision with player if exploding
       if (bomb.exploding) {
-        for (let j = 0; j < keys.length; j++) {
-          const player = this.players[keys[j]];
+        for (let j = 0; j < playerKeys.length; j++) {
+          const player = this.players[playerKeys[j]];
 
           if (!player.dead) {
             const distance = utils.circlesDistance(player.pos, bomb.pos);
@@ -67,14 +70,43 @@ class Game {
     }
   }
 
+  playerCollision(playerKeys, index) {
+    const player1 = this.players[playerKeys[index]];
+    for (let j = index; j < (playerKeys.length - 1); j++) {
+      const player2 = this.players[playerKeys[j + 1]];
+
+      // only check collision if the other player is alive
+      if (!player2.dead) {
+        const distance = utils.circlesDistance(player1.pos, player2.pos);
+        const destDistance = utils.circlesDistance(player1.destPos, player2.destPos);
+
+        // check if player is colliding and if destPos has smaller distance
+        if (distance <= (player1.radius + player2.radius)) {
+          player1.colliding = true;
+          player2.colliding = true;
+
+          if (destDistance < distance) {
+            // prevent player from colliding farther
+            player1.destPos = { ...player1.pos };
+            player2.destPos = { ...player2.pos };
+          } else if (destDistance > distance || destDistance > (player1.radius + player2.radius)) {
+            player1.colliding = false;
+            player2.colliding = false;
+          }
+        }
+      }
+    }
+  }
+
   // check if players are ready
   preparing() {
     const keys = Object.keys(this.players);
     let readyPlayers = 0;
 
-    for (let j = 0; j < keys.length; j++) {
-      const player = this.players[keys[j]];
+    for (let i = 0; i < keys.length; i++) {
+      const player = this.players[keys[i]];
 
+      this.playerCollision(keys, i);
       if (player.ready) {
         readyPlayers++;
       }
@@ -89,26 +121,39 @@ class Game {
     let deadPlayers = 0;
 
     // bomb update in check collision
-    this.checkCollision(keys);
+    this.bombCollision(keys);
 
     // loop through players
-    for (let j = 0; j < keys.length; j++) {
-      const player = this.players[keys[j]];
+    for (let i = 0; i < keys.length; i++) {
+      const player = this.players[keys[i]];
 
-      // check if player used a skill
-      if (player.cooldown <= 0 && player.placeBomb) {
-        player.cooldown = 4;
-        this.bombs.push(new Bomb(1, player.pos));
-        player.placeBomb = false;
-      } else if (player.cooldown > 0) {
-        player.cooldown -= this.dt;
-      }
-
-      // increase score if player is not dead
+      // increase score, check player collisions with other alive players
       if (!player.dead) {
+        this.playerCollision(keys, i);
         player.score++;
+
+        // skill to push bombs away
+        /*
+        if (player.cooldown <= 0 && player.placeBomb) {
+          player.cooldown = 4;
+          this.bombs.push(new Bomb(1, player.pos));
+          player.placeBomb = false;
+        }
+        */
       } else {
         deadPlayers++;
+
+        // skill to place bomb
+        if (player.cooldown <= 0 && player.placeBomb) {
+          player.cooldown = 4;
+          this.bombs.push(new Bomb(1, player.pos));
+          player.placeBomb = false;
+        }
+      }
+
+      // reduce cooldown
+      if (player.cooldown > 0) {
+        player.cooldown -= this.dt;
       }
     }
 

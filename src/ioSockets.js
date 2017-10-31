@@ -21,6 +21,8 @@ const updateRoom = (room, io) => {
 // else they join the existing room
 const onJoined = (sock, io) => {
   const socket = sock;
+
+  // create player's hash and put them in the lobby room
   socket.on('join', () => {
     const hash = xxh.h32(`${socket.id}${new Date().getTime()}`, 0xCAFEBABE).toString(16);
 
@@ -46,6 +48,7 @@ const onJoined = (sock, io) => {
     socket.emit('roomList', rooms);
   });
 
+  // move the player to the room name they choose
   socket.on('changeRoom', (data) => {
     if (!gameRooms[data.room]) {
       socket.leave('lobby');
@@ -92,7 +95,6 @@ const onJoined = (sock, io) => {
   });
 };
 
-// update player movement
 const onMsg = (sock) => {
   const socket = sock;
 
@@ -114,12 +116,14 @@ const onMsg = (sock) => {
     socket.emit('roomList', rooms);
   });
 
+  // update player movement
   socket.on('updatePlayer', (user) => {
     const room = gameRooms[socket.room];
 
     room.players[socket.hash].update(user);
   });
 
+  // toggle player's ready
   socket.on('togglePlayerReady', (user) => {
     const room = gameRooms[socket.room];
 
@@ -127,7 +131,7 @@ const onMsg = (sock) => {
   });
 };
 
-const onDisconnect = (sock) => {
+const onDisconnect = (sock, io) => {
   const socket = sock;
 
   socket.on('disconnect', () => {
@@ -142,6 +146,9 @@ const onDisconnect = (sock) => {
         if (game.room === socket.room) {
           game.deletePlayer(socket.hash);
 
+          io.sockets.in(socket.room).emit('removePlayer', socket.hash);
+
+          socket.leave(socket.room);
           // deletes room if no players exist in it
           if (Object.keys(game.players).length === 0) {
             clearInterval(game.interval);

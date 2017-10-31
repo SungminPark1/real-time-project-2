@@ -1,3 +1,4 @@
+/*
 const rooms = {};
 
 // checks player x player collision
@@ -26,3 +27,4 @@ process.on('message', (object) => {
     }
   }
 });
+*/

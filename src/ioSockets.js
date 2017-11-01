@@ -95,7 +95,7 @@ const onJoined = (sock, io) => {
   });
 };
 
-const onMsg = (sock) => {
+const onMsg = (sock, io) => {
   const socket = sock;
 
   // refresh room listing in lobby
@@ -119,8 +119,18 @@ const onMsg = (sock) => {
   // update player movement
   socket.on('updatePlayer', (user) => {
     const room = gameRooms[socket.room];
+    const player = room.players[socket.hash];
 
-    room.players[socket.hash].update(user);
+    player.update(user);
+
+    // emit location of skill used if player used a skill to animate client side
+    if (room.status === 'started' && player.cooldown <= 0 && player.usedSkill) {
+      io.sockets.in(socket.room).emit('skillUsed', {
+        type: player.dead ? 'bomb' : 'push',
+        color: player.color,
+        pos: player.pos,
+      });
+    }
   });
 
   // toggle player's ready

@@ -98,6 +98,31 @@ class Game {
     }
   }
 
+  pushBombs(pos) {
+    // loop through bombs
+    for (let i = 0; i < this.bombs.length; i++) {
+      const bomb = this.bombs[i];
+
+      // check only non-exploded bombs
+      if (!bomb.exploding) {
+        const distance = utils.circlesDistance(pos, bomb.pos);
+        if (distance < 150) {
+          const pushStr = (150 - distance) / 150;
+
+          // find max distance for x and y
+          const maxX = (bomb.pos.x - pos.x) * (1 + pushStr);
+          const maxY = (bomb.pos.y - pos.y) * (1 + pushStr);
+
+          // velocity range -6 ~ 6
+          bomb.velocity = {
+            x: (maxX * pushStr) / 25,
+            y: (maxY * pushStr) / 25,
+          };
+        }
+      }
+    }
+  }
+
   // check if players are ready
   preparing() {
     const keys = Object.keys(this.players);
@@ -133,21 +158,19 @@ class Game {
         player.score++;
 
         // skill to push bombs away
-        /*
-        if (player.cooldown <= 0 && player.placeBomb) {
-          player.cooldown = 4;
-          this.bombs.push(new Bomb(1, player.pos));
-          player.placeBomb = false;
+        if (player.cooldown <= 0 && player.usedSkill) {
+          player.cooldown = 6;
+          this.pushBombs(player.pos);
+          player.usedSkill = false;
         }
-        */
       } else {
         deadPlayers++;
 
         // skill to place bomb
-        if (player.cooldown <= 0 && player.placeBomb) {
+        if (player.cooldown <= 0 && player.usedSkill) {
           player.cooldown = 4;
           this.bombs.push(new Bomb(1, player.pos));
-          player.placeBomb = false;
+          player.usedSkill = false;
         }
       }
 

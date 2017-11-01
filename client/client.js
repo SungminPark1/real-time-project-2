@@ -19,10 +19,11 @@ let scoreList;
 let roomStatus = 'preparing';
 let players = {};
 let bombs = [];
+let skills = [];
 
 // player related vars
 let updated = false;
-let placeBomb = false;
+let usedSkill = false;
 let previousKeyDown = false;
 let hash;
 
@@ -46,10 +47,73 @@ const lerpPos = (pos0, pos1, alpha) => ({
 
 const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
+const updateSkills = () => {
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+
+    if (skill.type === 'push') {
+      skill.outerRadius += 5;
+      skill.innerRadius += 2.5;
+      skill.opacity += -0.02;
+      skill.life += -1;
+    } else if (skill.type === 'bomb') {
+      skill.outerRadius += -5;
+      skill.innerRadius += -2.5;
+      skill.opacity += 0.03;
+      skill.life += -1;
+    }
+  }
+
+  skills = skills.filter(skill => skill.life > 0);
+};
+
+const drawSkills = () => {
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+    const x = skill.pos.x;
+    const y = skill.pos.y;
+
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, skill.outerRadius);
+    grad.addColorStop(0, `rgba(${skill.color.r}, ${skill.color.g}, ${skill.color.b}, ${skill.opacity})`);
+    grad.addColorStop(1, `rgba(${skill.color.r}, ${skill.color.g}, ${skill.color.b}, 0)`);
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, skill.outerRadius, 0, Math.PI * 2, false); // outer
+    ctx.arc(x, y, skill.innerRadius, 0, Math.PI * 2, true); // inner
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  }
+};
+
+// show something when skill is used
+const handleSkill = (data) => {
+  const skill = {
+    type: data.type,
+    pos: data.pos,
+    color: data.color,
+    outerRadius: 0,
+    innerRadius: 0,
+    opacity: 0,
+    life: 30,
+  };
+
+  if (skill.type === 'push') {
+    skill.opacity = 0.6;
+    skills.push(skill);
+  } else if (skill.type === 'bomb') {
+    skill.outerRadius = 150;
+    skill.innerRadius = 75;
+    skills.push(skill);
+  }
+};
+
 const updateMovement = (status) => {
   const user = players[hash];
   updated = false;
-  placeBomb = false;
+  usedSkill = false;
 
   user.prevPos = user.pos;
 
@@ -74,7 +138,7 @@ const updateMovement = (status) => {
   // skill check
   if (status === 'started') {
     if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
-      placeBomb = true;
+      usedSkill = true;
       updated = true;
     }
   }
@@ -92,7 +156,7 @@ const updateMovement = (status) => {
       pos: user.pos,
       prevPos: user.prevPos,
       destPos: user.destPos,
-      placeBomb,
+      usedSkill,
     });
   }
 };
@@ -211,8 +275,11 @@ const started = (status) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   updateMovement(status);
+  updateSkills();
+
   drawPlayers(status);
   drawBombs();
+  drawSkills();
 };
 
 // handles the clients draw related functions
@@ -229,6 +296,7 @@ const handleDraw = () => {
     started(roomStatus);
   } else if (roomStatus === 'restarting') {
     // freeze screen and loop back to start
+    skills = [];
     drawText('Restarting', 180);
   }
 
@@ -289,11 +357,15 @@ const removePlayer = (userHash) => {
 const setupSocket = () => {
   socket.emit('join');
 
+  socket.on('update', handleUpdate);
+
+  socket.on('skillUsed', handleSkill);
+
+  socket.on('removePlayer', removePlayer);
+
   socket.on('hash', (data) => {
     hash = data.hash;
   });
-
-  socket.on('update', handleUpdate);
 
   // get other clients data from server
   socket.on('initData', (data) => {
@@ -304,7 +376,6 @@ const setupSocket = () => {
     roomInfo.style.display = 'none';
     scoreboard.style.display = 'block';
 
-    console.log(players);
     window.requestAnimationFrame(handleDraw);
   });
 
@@ -321,7 +392,6 @@ const setupSocket = () => {
     }
   });
 
-  socket.on('removePlayer', removePlayer);
   socket.on('usernameError', (data) => {
     username.style.border = 'solid 1px red';
     console.log(data.msg);

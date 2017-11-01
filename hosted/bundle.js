@@ -23,10 +23,11 @@ var scoreList = void 0;
 var roomStatus = 'preparing';
 var players = {};
 var bombs = [];
+var skills = [];
 
 // player related vars
 var updated = false;
-var placeBomb = false;
+var usedSkill = false;
 var previousKeyDown = false;
 var hash = void 0;
 
@@ -54,10 +55,75 @@ var clamp = function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 };
 
+var updateSkills = function updateSkills() {
+  for (var i = 0; i < skills.length; i++) {
+    var skill = skills[i];
+
+    if (skill.type === 'push') {
+      skill.outerRadius += 5;
+      skill.innerRadius += 2.5;
+      skill.opacity += -0.02;
+      skill.life += -1;
+    } else if (skill.type === 'bomb') {
+      skill.outerRadius += -5;
+      skill.innerRadius += -2.5;
+      skill.opacity += 0.03;
+      skill.life += -1;
+    }
+  }
+
+  skills = skills.filter(function (skill) {
+    return skill.life > 0;
+  });
+};
+
+var drawSkills = function drawSkills() {
+  for (var i = 0; i < skills.length; i++) {
+    var skill = skills[i];
+    var x = skill.pos.x;
+    var y = skill.pos.y;
+
+    var grad = ctx.createRadialGradient(x, y, 0, x, y, skill.outerRadius);
+    grad.addColorStop(0, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', ' + skill.opacity + ')');
+    grad.addColorStop(1, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', 0)');
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, skill.outerRadius, 0, Math.PI * 2, false); // outer
+    ctx.arc(x, y, skill.innerRadius, 0, Math.PI * 2, true); // inner
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  }
+};
+
+// show something when skill is used
+var handleSkill = function handleSkill(data) {
+  var skill = {
+    type: data.type,
+    pos: data.pos,
+    color: data.color,
+    outerRadius: 0,
+    innerRadius: 0,
+    opacity: 0,
+    life: 30
+  };
+
+  if (skill.type === 'push') {
+    skill.opacity = 0.6;
+    skills.push(skill);
+  } else if (skill.type === 'bomb') {
+    skill.outerRadius = 150;
+    skill.innerRadius = 75;
+    skills.push(skill);
+  }
+};
+
 var updateMovement = function updateMovement(status) {
   var user = players[hash];
   updated = false;
-  placeBomb = false;
+  usedSkill = false;
 
   user.prevPos = user.pos;
 
@@ -82,7 +148,7 @@ var updateMovement = function updateMovement(status) {
   // skill check
   if (status === 'started') {
     if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
-      placeBomb = true;
+      usedSkill = true;
       updated = true;
     }
   }
@@ -100,7 +166,7 @@ var updateMovement = function updateMovement(status) {
       pos: user.pos,
       prevPos: user.prevPos,
       destPos: user.destPos,
-      placeBomb: placeBomb
+      usedSkill: usedSkill
     });
   }
 };
@@ -224,8 +290,11 @@ var started = function started(status) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   updateMovement(status);
+  updateSkills();
+
   drawPlayers(status);
   drawBombs();
+  drawSkills();
 };
 
 // handles the clients draw related functions
@@ -242,6 +311,7 @@ var handleDraw = function handleDraw() {
     started(roomStatus);
   } else if (roomStatus === 'restarting') {
     // freeze screen and loop back to start
+    skills = [];
     drawText('Restarting', 180);
   }
 
@@ -302,11 +372,15 @@ var removePlayer = function removePlayer(userHash) {
 var setupSocket = function setupSocket() {
   socket.emit('join');
 
+  socket.on('update', handleUpdate);
+
+  socket.on('skillUsed', handleSkill);
+
+  socket.on('removePlayer', removePlayer);
+
   socket.on('hash', function (data) {
     hash = data.hash;
   });
-
-  socket.on('update', handleUpdate);
 
   // get other clients data from server
   socket.on('initData', function (data) {
@@ -317,7 +391,6 @@ var setupSocket = function setupSocket() {
     roomInfo.style.display = 'none';
     scoreboard.style.display = 'block';
 
-    console.log(players);
     window.requestAnimationFrame(handleDraw);
   });
 
@@ -334,7 +407,6 @@ var setupSocket = function setupSocket() {
     }
   });
 
-  socket.on('removePlayer', removePlayer);
   socket.on('usernameError', function (data) {
     username.style.border = 'solid 1px red';
     console.log(data.msg);

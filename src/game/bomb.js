@@ -9,6 +9,7 @@ class Bomb {
     };
     this.prevPos = { ...this.pos };
     this.destPos = { ...this.pos };
+    this.velocity = { x: 0, y: 0 };
     this.fuse = 2 + strength; // in sec
     this.radius = 0; // temp indication of when its about to explode
     this.exploding = false;
@@ -17,11 +18,22 @@ class Bomb {
     this.active = true;
   }
 
-  // 
+  // update bomb
   update(dt) {
     if (!this.exploding) {
       // update fuse and radius
       // check if the bomb should start exploding
+
+      // update pos if it has velocity
+      const v = this.velocity;
+      if (v.x > 0.1 || v.x < -0.05) {
+        this.pos.x += v.x;
+        v.x *= 0.95;
+      }
+      if (v.y > 0.1 || v.y < -0.05) {
+        this.pos.y += v.y;
+        v.y *= 0.95;
+      }
 
       this.fuse -= dt;
       this.radius = Math.min(this.explosionRadius - (this.fuse * 20), this.explosionRadius);

@@ -26,7 +26,7 @@ class Player {
     this.dead = false;
 
     // skill related
-    this.placeBomb = false;
+    this.usedSkill = false;
     this.cooldown = 0;
   }
 
@@ -37,7 +37,7 @@ class Player {
     }
     this.prevPos = user.prevPos;
     this.destPos = user.destPos;
-    this.placeBomb = user.placeBomb;
+    this.usedSkill = user.usedSkill;
   }
 
   toggleReady(user) {
@@ -48,7 +48,7 @@ class Player {
     this.pos = pos;
     this.ready = false;
     this.dead = false;
-    this.placeBomb = false;
+    this.usedSkill = false;
     this.cooldown = 0;
 
     if (hardReset) {

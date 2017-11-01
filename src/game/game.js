@@ -98,6 +98,7 @@ class Game {
     }
   }
 
+  // add velocity to bombs
   pushBombs(pos) {
     // loop through bombs
     for (let i = 0; i < this.bombs.length; i++) {
@@ -106,18 +107,21 @@ class Game {
       // check only non-exploded bombs
       if (!bomb.exploding) {
         const distance = utils.circlesDistance(pos, bomb.pos);
-        if (distance < 150) {
-          const pushStr = (150 - distance) / 150;
+
+        if (distance < 100) {
+          // pushStr range 0 ~ 5
+          const pushStr = (100 - distance) / 20;
+          const dx = bomb.pos.x - pos.x;
+          const dy = bomb.pos.y - pos.y;
+          const mag = Math.sqrt((dx * dx) + (dy * dy));
 
           // find max distance for x and y
-          const maxX = (bomb.pos.x - pos.x) * (1 + pushStr);
-          const maxY = (bomb.pos.y - pos.y) * (1 + pushStr);
-
-          // velocity range -6 ~ 6
-          bomb.velocity = {
-            x: (maxX * pushStr) / 25,
-            y: (maxY * pushStr) / 25,
+          const maxVelocity = {
+            x: (dx / mag) * pushStr,
+            y: (dy / mag) * pushStr,
           };
+
+          bomb.velocity = maxVelocity;
         }
       }
     }

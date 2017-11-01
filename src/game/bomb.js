@@ -24,15 +24,14 @@ class Bomb {
       // update fuse and radius
       // check if the bomb should start exploding
 
-      // update pos if it has velocity
-      const v = this.velocity;
-      if (v.x > 0.1 || v.x < -0.05) {
-        this.pos.x += v.x;
-        v.x *= 0.95;
+      // update pos if it passes velocity threshold
+      if (this.velocity.x > 0.05 || this.velocity.x < -0.05) {
+        this.pos.x += this.velocity.x;
+        this.velocity.x *= 0.95;
       }
-      if (v.y > 0.1 || v.y < -0.05) {
-        this.pos.y += v.y;
-        v.y *= 0.95;
+      if (this.velocity.y > 0.05 || this.velocity.y < -0.05) {
+        this.pos.y += this.velocity.y;
+        this.velocity.y *= 0.95;
       }
 
       this.fuse -= dt;

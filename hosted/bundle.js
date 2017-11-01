@@ -228,6 +228,7 @@ var drawPlayers = function drawPlayers() {
   ctx.fill();
   ctx.stroke();
   ctx.closePath();
+  ctx.beginPath();
   ctx.restore();
 };
 

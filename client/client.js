@@ -216,6 +216,7 @@ const drawPlayers = (status = 'preparing') => {
   ctx.fill();
   ctx.stroke();
   ctx.closePath();
+  ctx.beginPath();
   ctx.restore();
 };
 

@@ -15,8 +15,7 @@ class Game {
     this.clientBombs = [];
     this.bombTimer = 2;
     this.currentTimer = this.bombTimer + 1;
-    this.time = new Date().getTime();
-    this.lastUpdate = this.time;
+    this.lastUpdate = new Date().getTime();
     this.dt = 0;
 
     this.restart = 1;
@@ -234,8 +233,8 @@ class Game {
   update() {
     const now = new Date().getTime();
     // in seconds
-    this.dt = (now - this.time) / 1000;
-    this.time = now;
+    this.dt = (now - this.lastUpdate) / 1000;
+    this.lastUpdate = now;
 
     if (this.status === GAME_PREPARING) {
       this.preparing();

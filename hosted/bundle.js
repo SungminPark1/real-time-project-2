@@ -1,7 +1,5 @@
 'use strict';
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var socket = void 0;
 var canvas = void 0;
 var ctx = void 0;
@@ -45,9 +43,13 @@ var myKeys = {
 
 // returns an object { x: var, y: var }
 var lerpPos = function lerpPos(pos0, pos1, alpha) {
+  var x = (1 - alpha) * pos0.x + alpha * pos1.x;
+  var y = (1 - alpha) * pos0.y + alpha * pos1.y;
+
+  // limit decimal to 2
   return {
-    x: (1 - alpha) * pos0.x + alpha * pos1.x,
-    y: (1 - alpha) * pos0.y + alpha * pos1.y
+    x: Math.round(x * 100) / 100,
+    y: Math.round(y * 100) / 100
   };
 };
 
@@ -126,6 +128,7 @@ var updateMovement = function updateMovement(status) {
   usedSkill = false;
 
   user.prevPos = user.pos;
+  user.alpha = 0.05;
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
@@ -153,15 +156,16 @@ var updateMovement = function updateMovement(status) {
     }
   }
 
-  user.alpha = updated ? user.alpha : 0.05;
-
   // prevent player from going out of bound
   user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);
   user.destPos.y = clamp(user.destPos.y, user.radius, 500 - user.radius);
 
   // console.log(user.pos, user.prevPos, user.destPos);
+  var checkX = user.pos.x > user.destPos.x + 0.05 || user.pos.x < user.destPos.x - 0.05;
+  var checkY = user.pos.y > user.destPos.y + 0.05 || user.pos.y < user.destPos.y - 0.05;
+
   // if this client's user moves, send to server to update server
-  if (updated === true || user.pos.x !== user.destPos.x || user.pos.y !== user.destPos.y) {
+  if (updated === true || checkX || checkY) {
     socket.emit('updatePlayer', {
       pos: user.pos,
       prevPos: user.prevPos,
@@ -326,7 +330,7 @@ var handleDraw = function handleDraw() {
   window.requestAnimationFrame(handleDraw);
 };
 
-var updatePlayer = function updatePlayer(users) {
+var updatePlayer = function updatePlayer(users, lastUpdate) {
   var keys = Object.keys(users);
 
   // loop through players to update
@@ -337,8 +341,8 @@ var updatePlayer = function updatePlayer(users) {
     // else if player exist and last update is less than server's - update the player
     // else - do nothing
     if (!player) {
-      players[keys[i]] = _extends({}, users[keys[i]]);
-    } else if (player && player.lastUpdate < users[keys[i]].lastUpdate) {
+      players[keys[i]] = users[keys[i]];
+    } else if (player && player.lastUpdate < lastUpdate) {
       var updatedPlayer = users[keys[i]];
 
       player.lastUpdate = updatedPlayer.lastUpdate;
@@ -359,7 +363,7 @@ var updatePlayer = function updatePlayer(users) {
 var handleUpdate = function handleUpdate(data) {
   roomStatus = data.status;
 
-  updatePlayer(data.players);
+  updatePlayer(data.players, data.lastUpdate);
 
   bombs = data.bombs;
 };

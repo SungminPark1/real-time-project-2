@@ -41,6 +41,7 @@ class Player {
   }
 
   toggleReady(user) {
+    this.lastUpdate = new Date().getTime();
     this.ready = user.ready;
   }
 

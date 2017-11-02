@@ -40,10 +40,16 @@ const myKeys = {
 };
 
 // returns an object { x: var, y: var }
-const lerpPos = (pos0, pos1, alpha) => ({
-  x: ((1 - alpha) * pos0.x) + (alpha * pos1.x),
-  y: ((1 - alpha) * pos0.y) + (alpha * pos1.y),
-});
+const lerpPos = (pos0, pos1, alpha) => {
+  const x = ((1 - alpha) * pos0.x) + (alpha * pos1.x);
+  const y = ((1 - alpha) * pos0.y) + (alpha * pos1.y);
+
+  // limit decimal to 2
+  return {
+    x: Math.round(x * 100) / 100,
+    y: Math.round(y * 100) / 100,
+  };
+};
 
 const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
@@ -116,6 +122,7 @@ const updateMovement = (status) => {
   usedSkill = false;
 
   user.prevPos = user.pos;
+  user.alpha = 0.05;
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
@@ -143,15 +150,16 @@ const updateMovement = (status) => {
     }
   }
 
-  user.alpha = updated ? user.alpha : 0.05;
-
   // prevent player from going out of bound
   user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);
   user.destPos.y = clamp(user.destPos.y, user.radius, 500 - user.radius);
 
   // console.log(user.pos, user.prevPos, user.destPos);
+  const checkX = (user.pos.x > user.destPos.x + 0.05) || (user.pos.x < user.destPos.x - 0.05);
+  const checkY = (user.pos.y > user.destPos.y + 0.05) || (user.pos.y < user.destPos.y - 0.05);
+
   // if this client's user moves, send to server to update server
-  if (updated === true || user.pos.x !== user.destPos.x || user.pos.y !== user.destPos.y) {
+  if (updated === true || checkX || checkY) {
     socket.emit('updatePlayer', {
       pos: user.pos,
       prevPos: user.prevPos,
@@ -311,7 +319,7 @@ const handleDraw = () => {
   window.requestAnimationFrame(handleDraw);
 };
 
-const updatePlayer = (users) => {
+const updatePlayer = (users, lastUpdate) => {
   const keys = Object.keys(users);
 
   // loop through players to update
@@ -322,8 +330,8 @@ const updatePlayer = (users) => {
     // else if player exist and last update is less than server's - update the player
     // else - do nothing
     if (!player) {
-      players[keys[i]] = { ...users[keys[i]] };
-    } else if (player && player.lastUpdate < users[keys[i]].lastUpdate) {
+      players[keys[i]] = users[keys[i]];
+    } else if (player && player.lastUpdate < lastUpdate) {
       const updatedPlayer = users[keys[i]];
 
       player.lastUpdate = updatedPlayer.lastUpdate;
@@ -344,7 +352,7 @@ const updatePlayer = (users) => {
 const handleUpdate = (data) => {
   roomStatus = data.status;
 
-  updatePlayer(data.players);
+  updatePlayer(data.players, data.lastUpdate);
 
   bombs = data.bombs;
 };

@@ -334,12 +334,15 @@ const updatePlayer = (users, lastUpdate) => {
     } else if (player && player.lastUpdate < lastUpdate) {
       const updatedPlayer = users[keys[i]];
 
+      // Move last update out of player and keep track of rooms last update?
       player.lastUpdate = updatedPlayer.lastUpdate;
+
       player.prevPos = updatedPlayer.prevPos;
       player.destPos = updatedPlayer.destPos;
+
       player.dead = updatedPlayer.dead;
       player.ready = updatedPlayer.ready;
-      player.placeBomb = updatedPlayer.placeBomb;
+
       player.score = updatedPlayer.score;
       player.alpha = 0.05;
     }

@@ -1,5 +1,6 @@
 const xxh = require('xxhashjs');
 const Game = require('./game/game.js');
+// const child = require('child_process');
 
 const gameRooms = {};
 
@@ -7,7 +8,11 @@ const gameRooms = {};
 const updateRoom = (room, io) => {
   gameRooms[room].update();
 
+  // send message to update child process rooms
+
   const { status, lastUpdate, players, clientBombs } = gameRooms[room];
+
+  // only emit bombs, stats and player pos and score?
   io.sockets.in(room).emit('update', {
     status,
     lastUpdate,

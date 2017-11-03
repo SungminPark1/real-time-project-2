@@ -31,7 +31,6 @@ class Player {
   }
 
   update(user) {
-    this.lastUpdate = new Date().getTime();
     if (!this.colliding) {
       this.pos = user.pos;
     }
@@ -41,7 +40,6 @@ class Player {
   }
 
   toggleReady(user) {
-    this.lastUpdate = new Date().getTime();
     this.ready = user.ready;
   }
 

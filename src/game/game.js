@@ -29,46 +29,6 @@ class Game {
     delete this.players[hash];
   }
 
-  createBombs(dt) {
-    this.currentTimer -= dt;
-
-    if (this.currentTimer < 0 && this.bombs.length <= 30) {
-      this.bombs.push(new Bomb(utils.getRandomInt(3)));
-
-      this.bombTimer = Math.max(this.bombTimer * 0.98, 0.1);
-      this.currentTimer = this.bombTimer;
-    }
-  }
-
-  filterBombs() {
-    this.bombs = this.bombs.filter(bomb => bomb.active);
-  }
-
-  // TO DO:
-  // move collisions functions to collision.js since each room has same collision check
-  bombCollision(playerKeys) {
-    // loop through bombs
-    for (let i = 0; i < this.bombs.length; i++) {
-      const bomb = this.bombs[i];
-
-      // check collision with player if exploding
-      if (bomb.exploding) {
-        for (let j = 0; j < playerKeys.length; j++) {
-          const player = this.players[playerKeys[j]];
-
-          if (!player.dead) {
-            const distance = utils.circlesDistance(player.pos, bomb.pos);
-            if (distance < (player.radius + bomb.explosionRadius)) {
-              player.dead = true;
-            }
-          }
-        }
-      }
-
-      bomb.update(this.dt);
-    }
-  }
-
   playerCollision(playerKeys, index) {
     const player1 = this.players[playerKeys[index]];
     for (let j = index; j < (playerKeys.length - 1); j++) {
@@ -92,6 +52,50 @@ class Game {
             player1.colliding = false;
             player2.colliding = false;
           }
+        }
+      }
+    }
+  }
+
+  createBombs() {
+    this.currentTimer -= this.dt;
+
+    if (this.currentTimer < 0 && this.bombs.length <= 30) {
+      this.bombs.push(new Bomb(utils.getRandomInt(3)));
+
+      this.bombTimer = Math.max(this.bombTimer * 0.98, 0.1);
+      this.currentTimer = this.bombTimer;
+    }
+  }
+
+  updateBombs() {
+    for (let i = 0; i < this.bombs.length; i++) {
+      this.bombs[i].update(this.dt);
+    }
+
+    // filter out non active bombs and create new ones
+    this.bombs = this.bombs.filter(bomb => bomb.active);
+    this.createBombs();
+  }
+
+  // TO DO:
+  // move collisions functions to collision.js since each room has same collision check
+  bombCollision(user) {
+    const player = user;
+
+    // loop through bombs
+    for (let i = 0; i < this.bombs.length; i++) {
+      const bomb = this.bombs[i];
+
+      // check collision with player if exploding
+      if (bomb.exploding) {
+        const distance = utils.circlesDistance(player.pos, bomb.pos);
+
+        if (distance < (player.radius + bomb.explosionRadius)) {
+          player.dead = true;
+
+          // no longer need to check other collisions
+          return;
         }
       }
     }
@@ -149,7 +153,7 @@ class Game {
     let deadPlayers = 0;
 
     // bomb update in check collision
-    this.bombCollision(keys);
+    this.updateBombs(keys);
 
     // loop through players
     for (let i = 0; i < keys.length; i++) {
@@ -157,14 +161,18 @@ class Game {
 
       // increase score, check player collisions with other alive players
       if (!player.dead) {
+        // TODO handle with child process
         this.playerCollision(keys, i);
+        this.bombCollision(player);
+
         player.score++;
 
         // skill to push bombs away
         if (player.cooldown <= 0 && player.usedSkill) {
           player.cooldown = 6;
-          this.pushBombs(player.pos);
           player.usedSkill = false;
+
+          this.pushBombs(player.pos);
         }
       } else {
         deadPlayers++;
@@ -182,10 +190,6 @@ class Game {
         player.cooldown -= this.dt;
       }
     }
-
-    // filter out non active bombs and create new ones
-    this.filterBombs();
-    this.createBombs(this.dt);
 
     // filter bomb data to send only necessary info
     this.clientBombs = this.bombs.map(bomb => ({
@@ -243,7 +247,7 @@ class Game {
     } else if (this.status === GAME_RESTARTING) {
       this.restarting();
     } else {
-      console.log('AHHHHHH it broke...');
+      console.log('Game Status Broke: hard reseting game');
       this.restarting(true);
     }
   }

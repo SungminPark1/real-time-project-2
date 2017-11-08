@@ -46,6 +46,8 @@ collision.on('message', (m) => {
       break;
     }
     case 'deadCollide': {
+      // might not be needed?
+      console.log('deadCollide');
       const room = gameRooms[m.data.roomKey];
 
       // dead players should have colliding as false

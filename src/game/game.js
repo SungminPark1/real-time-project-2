@@ -47,36 +47,6 @@ class Game {
     player2.colliding = colliding;
   }
 
-  /*
-  playerCollision(playerKeys, index) {
-    const player1 = this.players[playerKeys[index]];
-    for (let j = index; j < (playerKeys.length - 1); j++) {
-      const player2 = this.players[playerKeys[j + 1]];
-
-      // only check collision if the other player is alive
-      if (!player2.dead) {
-        const distance = utils.circlesDistance(player1.pos, player2.pos);
-        const destDistance = utils.circlesDistance(player1.destPos, player2.destPos);
-
-        // check if player is colliding and if destPos has smaller distance
-        if (distance <= (player1.radius + player2.radius)) {
-          player1.colliding = true;
-          player2.colliding = true;
-
-          if (destDistance < distance) {
-            // prevent player from colliding farther
-            player1.destPos = { ...player1.pos };
-            player2.destPos = { ...player2.pos };
-          } else if (destDistance > distance || destDistance > (player1.radius + player2.radius)) {
-            player1.colliding = false;
-            player2.colliding = false;
-          }
-        }
-      }
-    }
-  }
-  */
-
   createBombs() {
     this.currentTimer -= this.dt;
 
@@ -97,31 +67,6 @@ class Game {
     this.bombs = this.bombs.filter(bomb => bomb.active);
     this.createBombs();
   }
-
-  /*
-  // TO DO:
-  // move collisions functions to collision.js since each room has same collision check
-  bombCollision(user) {
-    const player = user;
-
-    // loop through bombs
-    for (let i = 0; i < this.bombs.length; i++) {
-      const bomb = this.bombs[i];
-
-      // check collision with player if exploding
-      if (bomb.exploding) {
-        const distance = utils.circlesDistance(player.pos, bomb.pos);
-
-        if (distance < (player.radius + bomb.explosionRadius)) {
-          player.dead = true;
-
-          // no longer need to check other collisions
-          return;
-        }
-      }
-    }
-  }
-  */
 
   // add velocity to bombs
   pushBombs(pos) {
@@ -232,23 +177,25 @@ class Game {
     if (this.restart === 1) {
       const keys = Object.keys(this.players);
 
-      for (let j = 0; j < keys.length; j++) {
-        const player = this.players[keys[j]];
+      for (let i = 0; i < keys.length; i++) {
+        const player = this.players[keys[i]];
 
         let x = 250;
 
         // set players equally apart
         if (keys.length > 1) {
-          x = Math.round((j / (keys.length - 1)) * 400) + 50;
+          x = Math.round((i / (keys.length - 1)) * 400) + 50;
         }
 
         player.reset({ x, y: 250 }, hardReset);
+        this.clientPlayers[keys[i]] = player.getClientData();
       }
 
       // reset values
       this.bombTimer = 2;
       this.currentTimer = this.bombTimer + 1;
       this.bombs = [];
+      this.clientBombs = [];
       this.restart -= this.dt;
     } else if (this.restart < 1 && this.restart > 0) {
       this.restart -= this.dt;

@@ -159,7 +159,7 @@ const updateMovement = (status) => {
   const checkY = (user.pos.y > user.destPos.y + 0.05) || (user.pos.y < user.destPos.y - 0.05);
 
   // if this client's user moves, send to server to update server
-  if (updated === true || checkX || checkY) {
+  if (status !== 'restarting' && (updated === true || checkX || checkY)) {
     socket.emit('updatePlayer', {
       pos: user.pos,
       prevPos: user.prevPos,
@@ -349,8 +349,6 @@ const updatePlayer = (users, lastUpdate, status) => {
   }
 };
 
-// TODO:
-// reset player pos when status === 'restarting'
 // called when server sends update
 const handleUpdate = (data) => {
   roomStatus = data.status;

@@ -2,7 +2,7 @@ const http = require('http');
 const path = require('path');
 const express = require('express');
 const socketio = require('socket.io');
-const ioSockets = require('./ioSockets.js');
+const sockets = require('./sockets.js');
 
 const PORT = process.env.PORT || process.env.NODE_PORT || 3000;
 
@@ -19,11 +19,7 @@ const server = http.createServer(app);
 // pass in the http server into socketio and grab the websocket server as io
 const io = socketio(server);
 
-io.sockets.on('connection', (socket) => {
-  ioSockets.onJoined(socket, io);
-  ioSockets.onMsg(socket, io);
-  ioSockets.onDisconnect(socket, io);
-});
+sockets.setupSockets(io);
 
 server.listen(PORT, (err) => {
   if (err) {

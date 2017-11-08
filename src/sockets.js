@@ -2,10 +2,52 @@ const xxh = require('xxhashjs');
 const Game = require('./game/game.js');
 // const child = require('child_process');
 
+let io;
 const gameRooms = {};
+/*
+const collision = child.fork('./game/collision.js');
+
+/* Message types
+  lockPos
+  playerCollide
+  playerHit
+  deadCollide
+
+collision.on('message', (m) => {
+  switch (m.type) {
+    case 'lockPos': {
+      break;
+    }
+    case 'playerHit': {
+      break;
+    }
+    case 'playerCollide': {
+      break;
+    }
+    case 'deadCollide': {
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+});
+
+collision.on('error', (error) => {
+  console.dir(error);
+});
+
+collision.on('close', (code, signal) => {
+  console.log(`Child closed with ${code} ${signal}`);
+});
+
+collision.on('exit', (code, signal) => {
+  console.log(`Child exited with ${code} ${signal}`);
+});
+*/
 
 // update room data and sent data to client at set interval
-const updateRoom = (room, io) => {
+const updateRoom = (room) => {
   gameRooms[room].update();
 
   // send message to update child process rooms
@@ -22,9 +64,7 @@ const updateRoom = (room, io) => {
 };
 
 // on connect put player in lobby
-// create room on room change if room doesn't exist
-// else they join the existing room
-const onJoined = (sock, io) => {
+const onJoin = (sock) => {
   const socket = sock;
 
   // create player's hash and put them in the lobby room
@@ -52,8 +92,14 @@ const onJoined = (sock, io) => {
     socket.emit('hash', { hash });
     socket.emit('roomList', rooms);
   });
+};
 
-  // move the player to the room name they choose
+// move the player to the room name they choose
+// if room doesn't exist - create room
+// else - they join the existing room
+const onChangeRoom = (sock) => {
+  const socket = sock;
+
   socket.on('changeRoom', (data) => {
     if (!gameRooms[data.room]) {
       socket.leave('lobby');
@@ -100,10 +146,10 @@ const onJoined = (sock, io) => {
   });
 };
 
-const onMsg = (sock, io) => {
+// refresh room listing in lobby
+const onRoomRefresh = (sock) => {
   const socket = sock;
 
-  // refresh room listing in lobby
   socket.on('refreshRoom', () => {
     // emit back room names and player count
     const keys = Object.keys(gameRooms);
@@ -120,8 +166,12 @@ const onMsg = (sock, io) => {
 
     socket.emit('roomList', rooms);
   });
+};
 
-  // update player movement
+// update player movement
+const onUpdatePlayer = (sock) => {
+  const socket = sock;
+
   socket.on('updatePlayer', (user) => {
     const room = gameRooms[socket.room];
     const player = room.players[socket.hash];
@@ -137,8 +187,12 @@ const onMsg = (sock, io) => {
       });
     }
   });
+};
 
-  // toggle player's ready
+// toggle player's ready
+const onTogglePlayerReady = (sock) => {
+  const socket = sock;
+
   socket.on('togglePlayerReady', (user) => {
     const room = gameRooms[socket.room];
 
@@ -146,7 +200,7 @@ const onMsg = (sock, io) => {
   });
 };
 
-const onDisconnect = (sock, io) => {
+const onDisconnect = (sock) => {
   const socket = sock;
 
   socket.on('disconnect', () => {
@@ -175,8 +229,19 @@ const onDisconnect = (sock, io) => {
   });
 };
 
+const setupSockets = (ioServer) => {
+  io = ioServer;
+
+  io.sockets.on('connection', (socket) => {
+    onJoin(socket);
+    onChangeRoom(socket);
+    onRoomRefresh(socket);
+    onUpdatePlayer(socket);
+    onTogglePlayerReady(socket);
+    onDisconnect(socket);
+  });
+};
+
 module.exports = {
-  onJoined,
-  onMsg,
-  onDisconnect,
+  setupSockets,
 };

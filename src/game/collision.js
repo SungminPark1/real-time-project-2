@@ -1,6 +1,14 @@
 const utils = require('../utils.js');
+const Message = require('../message.js');
 
 const rooms = {};
+
+/* Send Messages
+  lockPos
+  playerCollide
+  playerHit
+  deadCollide
+*/
 
 // checks player x player collision
 const playerCollision = (room, playerKeys, index) => {
@@ -16,26 +24,38 @@ const playerCollision = (room, playerKeys, index) => {
 
       // check if player is colliding and if destPos has smaller distance
       if (distance <= (player1.radius + player2.radius)) {
-        // let colliding = true;
+        let collide = true;
 
         if (destDistance < distance) {
+          // create fuction to handle in game.js
           // prevent player from colliding farther
           player1.destPos = { ...player1.pos };
           player2.destPos = { ...player2.pos };
 
-          // SEND MESSAGE 'lockpos', roomKeys, {playerHash1, destPos1}, {playerHash2, destPos2}
+          // SEND MESSAGE 'lockPos', roomKeys, {playerHash1, destPos1}, {playerHash2, destPos2}
+          process.send(new Message('lockPos', {
+            roomKey: room.room,
+            p1Hash: player1.hash,
+            p2Hash: player2.hash,
+          }));
         } else if (destDistance > distance || destDistance > (player1.radius + player2.radius)) {
-          // colliding = false;
+          collide = false;
         }
 
-        // SEND MESSAGE 'playerColliding', roomKey, bool, playerHash1, playerHash2
+        // SEND MESSAGE 'playerCollide', roomKey, bool, playerHash1, playerHash2
+        process.send(new Message('playerCollide', {
+          roomKey: room.room,
+          collide,
+          p1Hash: player1.hash,
+          p2Hash: player2.hash,
+        }));
       }
     }
   }
 };
 
 // checks player x bomb and player x explosion collision
-const bombCollision = (roomName, user) => {
+const bombCollision = (room, user) => {
   const player = user;
 
   // loop through bombs
@@ -47,9 +67,15 @@ const bombCollision = (roomName, user) => {
       const distance = utils.circlesDistance(player.pos, bomb.pos);
 
       if (distance < (player.radius + bomb.explosionRadius)) {
+        // create fuction to handle in game.js
         player.dead = true;
+        player.collide = false;
 
         // SEND MESSAGE ('playerHit', roomKey, playerHash)
+        process.send(new Message('playerHit', {
+          roomKey: room.room,
+          p1Hash: player.hash,
+        }));
 
         // no longer need to check other collisions
         return;
@@ -76,9 +102,11 @@ const checkCollisions = () => {
           bombCollision(room, player);
         }
       } else if (player.dead && player.colliding) {
-        player.colliding = false;
-
-        // SEND MESSAGE 'setColliding' roomKeys, bool, playerHash
+        // SEND MESSAGE 'deadCollide' roomKeys, bool, playerHash
+        process.send(new Message('deadCollide', {
+          roomKey: room.room,
+          p1Hash: player.hash,
+        }));
       }
     }
   }
@@ -96,16 +124,20 @@ process.on('message', (object) => {
     case 'updateRoom': {
       break;
     }
+    case 'deleteRoom': {
+      break;
+    }
     case 'addPlayer': {
       break;
     }
     case 'updatePlayer': {
       break;
     }
-    case 'deletePlater': {
+    case 'deletePlayer': {
       break;
     }
     default: {
+      console.log(`unclear type: ${object.type} from ioSockets`);
       break;
     }
   }

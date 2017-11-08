@@ -138,7 +138,7 @@ class Game {
     for (let i = 0; i < keys.length; i++) {
       const player = this.players[keys[i]];
 
-      this.playerCollision(keys, i);
+      // this.playerCollision(keys, i);
       if (player.ready) {
         readyPlayers++;
       }
@@ -162,8 +162,8 @@ class Game {
       // increase score, check player collisions with other alive players
       if (!player.dead) {
         // TODO handle with child process
-        this.playerCollision(keys, i);
-        this.bombCollision(player);
+        // this.playerCollision(keys, i);
+        // this.bombCollision(player);
 
         player.score++;
 

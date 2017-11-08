@@ -5,7 +5,7 @@ const rooms = {};
 
 /* Send Messages
   lockPos
-  playerCollide
+  playerColliding
   playerHit
   deadCollide
 */
@@ -24,7 +24,7 @@ const playerCollision = (room, playerKeys, index) => {
 
       // check if player is colliding and if destPos has smaller distance
       if (distance <= (player1.radius + player2.radius)) {
-        let collide = true;
+        let colliding = true;
 
         if (destDistance < distance) {
           // create fuction to handle in game.js
@@ -39,13 +39,14 @@ const playerCollision = (room, playerKeys, index) => {
             p2Hash: player2.hash,
           }));
         } else if (destDistance > distance || destDistance > (player1.radius + player2.radius)) {
-          collide = false;
+          // break out of colliding check by checking when destDistance increase
+          colliding = false;
         }
 
-        // SEND MESSAGE 'playerCollide', roomKey, bool, playerHash1, playerHash2
-        process.send(new Message('playerCollide', {
+        // SEND MESSAGE 'playerColliding', roomKey, bool, playerHash1, playerHash2
+        process.send(new Message('playerColliding', {
           roomKey: room.room,
-          collide,
+          colliding,
           p1Hash: player1.hash,
           p2Hash: player2.hash,
         }));
@@ -59,8 +60,8 @@ const bombCollision = (room, user) => {
   const player = user;
 
   // loop through bombs
-  for (let k = 0; k < this.bombs.length; k++) {
-    const bomb = this.bombs[k];
+  for (let k = 0; k < room.bombs.length; k++) {
+    const bomb = room.bombs[k];
 
     // check collision with player if exploding
     if (bomb.exploding) {
@@ -94,7 +95,7 @@ const checkCollisions = () => {
 
     // loop through each rooms player
     for (let j = 0; j < playerKeys.length; j++) {
-      const player = room.players[playerKeys[i]];
+      const player = room.players[playerKeys[j]];
 
       if (room.status !== 'restarting' && !player.dead) {
         playerCollision(room, playerKeys, j);
@@ -102,6 +103,8 @@ const checkCollisions = () => {
           bombCollision(room, player);
         }
       } else if (player.dead && player.colliding) {
+        player.colliding = false;
+
         // SEND MESSAGE 'deadCollide' roomKeys, bool, playerHash
         process.send(new Message('deadCollide', {
           roomKey: room.room,
@@ -114,30 +117,52 @@ const checkCollisions = () => {
 
 setInterval(() => {
   checkCollisions();
-}, 20);
+}, 1000 / 60);
 
-process.on('message', (object) => {
-  switch (object.type) {
+process.on('message', (m) => {
+  switch (m.type) {
     case 'addRoom': {
+      rooms[m.data.roomKey] = m.data.room;
       break;
     }
     case 'updateRoom': {
+      const room = rooms[m.data.roomKey];
+
+      if (room && room.lastUpdate < m.data.lastUpdate) {
+        const keys = Object.keys(room.players);
+
+        for (let i = 0; i < keys.length; i++) {
+          const player = room.players[keys[i]];
+          if (m.data.players[keys[i]]) {
+            player.pos = m.data.players[keys[i]].pos;
+            player.destPos = m.data.players[keys[i]].destPos;
+            player.prevPos = m.data.players[keys[i]].prevPos;
+          }
+          if (m.data.status === 'restarting') {
+            player.dead = false;
+          }
+        }
+
+        room.bombs = m.data.bombs;
+        room.status = m.data.status;
+        room.lastUpdate = m.data.lastUpdate;
+      }
       break;
     }
     case 'deleteRoom': {
+      delete rooms[m.data.roomKey];
       break;
     }
     case 'addPlayer': {
-      break;
-    }
-    case 'updatePlayer': {
+      rooms[m.data.roomKey].players[m.data.playerHash] = m.data.player;
       break;
     }
     case 'deletePlayer': {
+      delete rooms[m.data.roomKey].players[m.data.playerHash];
       break;
     }
     default: {
-      console.log(`unclear type: ${object.type} from ioSockets`);
+      console.log(`unclear type: ${m.type} from sockets.js`);
       break;
     }
   }

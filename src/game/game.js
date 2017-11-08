@@ -12,23 +12,42 @@ class Game {
     this.status = GAME_PREPARING; // cycle: preparing -> started -> restarting -> (back to started)
     this.players = {};
     this.bombs = [];
-    this.clientBombs = [];
     this.bombTimer = 2;
     this.currentTimer = this.bombTimer + 1;
     this.lastUpdate = new Date().getTime();
     this.dt = 0;
+
+    // only nessesary data to set each update
+    this.clientPlayers = {};
+    this.clientBombs = [];
 
     this.restart = 1;
   }
 
   addPlayer(user) {
     this.players[user.hash] = new Player(user);
+    this.clientPlayers[user.hash] = this.players[user.hash].getClientData();
   }
 
   deletePlayer(hash) {
     delete this.players[hash];
   }
 
+  lockPlayerPos(hash) {
+    const player = this.players[hash];
+
+    player.destPos = player.pos;
+  }
+
+  playersColliding(p1Hash, p2Hash, colliding) {
+    const player1 = this.players[p1Hash];
+    const player2 = this.players[p2Hash];
+
+    player1.colliding = colliding;
+    player2.colliding = colliding;
+  }
+
+  /*
   playerCollision(playerKeys, index) {
     const player1 = this.players[playerKeys[index]];
     for (let j = index; j < (playerKeys.length - 1); j++) {
@@ -56,6 +75,7 @@ class Game {
       }
     }
   }
+  */
 
   createBombs() {
     this.currentTimer -= this.dt;
@@ -78,6 +98,7 @@ class Game {
     this.createBombs();
   }
 
+  /*
   // TO DO:
   // move collisions functions to collision.js since each room has same collision check
   bombCollision(user) {
@@ -100,6 +121,7 @@ class Game {
       }
     }
   }
+  */
 
   // add velocity to bombs
   pushBombs(pos) {
@@ -138,10 +160,11 @@ class Game {
     for (let i = 0; i < keys.length; i++) {
       const player = this.players[keys[i]];
 
-      // this.playerCollision(keys, i);
       if (player.ready) {
         readyPlayers++;
       }
+
+      this.clientPlayers[keys[i]] = player.getClientData();
     }
 
     this.status = keys.length === readyPlayers ? GAME_STARTED : this.status;
@@ -189,6 +212,8 @@ class Game {
       if (player.cooldown > 0) {
         player.cooldown -= this.dt;
       }
+
+      this.clientPlayers[keys[i]] = player.getClientData();
     }
 
     // filter bomb data to send only necessary info

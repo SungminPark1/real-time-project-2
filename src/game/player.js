@@ -30,6 +30,20 @@ class Player {
     this.cooldown = 0;
   }
 
+  // data the client needs every update
+  // other data is sent when needed
+  getClientData() {
+    const { hash, pos, destPos, prevPos, score } = this;
+
+    return {
+      hash,
+      pos,
+      destPos,
+      prevPos,
+      score,
+    };
+  }
+
   update(user) {
     if (!this.colliding) {
       this.pos = user.pos;
@@ -45,6 +59,8 @@ class Player {
 
   reset(pos, hardReset) {
     this.pos = pos;
+    this.prevPos = pos;
+    this.destPos = pos;
     this.ready = false;
     this.dead = false;
     this.usedSkill = false;

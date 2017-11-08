@@ -319,29 +319,29 @@ const handleDraw = () => {
   window.requestAnimationFrame(handleDraw);
 };
 
-const updatePlayer = (users, lastUpdate) => {
+const updatePlayer = (users, lastUpdate, status) => {
   const keys = Object.keys(users);
 
   // loop through players to update
   for (let i = 0; i < keys.length; i++) {
     const player = players[keys[i]];
 
-    // if player doesn't exist in players object - add player
-    // else if player exist and last update is less than server's - update the player
+    // if player exist and last update is less than server's - update the player
     // else - do nothing
-    if (!player) {
-      players[keys[i]] = users[keys[i]];
-    } else if (player && player.lastUpdate < lastUpdate) {
+    if (player && player.lastUpdate < lastUpdate) {
       const updatedPlayer = users[keys[i]];
 
       // Move last update out of player and keep track of rooms last update?
-      player.lastUpdate = updatedPlayer.lastUpdate;
+      player.lastUpdate = lastUpdate;
 
       player.prevPos = updatedPlayer.prevPos;
       player.destPos = updatedPlayer.destPos;
 
-      player.dead = updatedPlayer.dead;
-      player.ready = updatedPlayer.ready;
+      if (status === 'restarting') {
+        player.pos = updatedPlayer.pos;
+        player.dead = false;
+        player.ready = false;
+      }
 
       player.score = updatedPlayer.score;
       player.alpha = 0.05;
@@ -355,9 +355,13 @@ const updatePlayer = (users, lastUpdate) => {
 const handleUpdate = (data) => {
   roomStatus = data.status;
 
-  updatePlayer(data.players, data.lastUpdate);
+  updatePlayer(data.players, data.lastUpdate, data.status);
 
   bombs = data.bombs;
+};
+
+const addPlayer = (data) => {
+  players[data.hash] = data.player;
 };
 
 const removePlayer = (userHash) => {
@@ -373,7 +377,21 @@ const setupSocket = () => {
 
   socket.on('skillUsed', handleSkill);
 
+  socket.on('addPlayer', addPlayer);
+
   socket.on('removePlayer', removePlayer);
+
+  socket.on('playerReady', (data) => {
+    const player = players[data.hash];
+
+    player.ready = data.ready;
+  });
+
+  socket.on('playerDead', (data) => {
+    const player = players[data.hash];
+
+    player.dead = data.dead;
+  });
 
   socket.on('hash', (data) => {
     hash = data.hash;
@@ -433,6 +451,7 @@ const init = () => {
 
   setupSocket();
 
+  // event listeners
   changeRoom.addEventListener('click', () => {
     if (roomname.value) {
       socket.emit('changeRoom', {
@@ -451,7 +470,6 @@ const init = () => {
     socket.emit('refreshRoom');
   });
 
-  // event listeners
   window.addEventListener('keydown', (e) => {
     // console.log(`keydown: ${e.keyCode}`);
     // prevent spaces in name and scroll down function

@@ -1,33 +1,60 @@
 const xxh = require('xxhashjs');
+const child = require('child_process');
 const Game = require('./game/game.js');
-// const child = require('child_process');
+const Message = require('./message.js');
 
 let io;
 const gameRooms = {};
-/*
-const collision = child.fork('./game/collision.js');
+const collision = child.fork('./src/game/collision.js');
 
 /* Message types
   lockPos
-  playerCollide
+  playerColliding
   playerHit
   deadCollide
+*/
 
 collision.on('message', (m) => {
   switch (m.type) {
     case 'lockPos': {
+      const room = gameRooms[m.data.roomKey];
+
+      // lock their pos
+      room.lockPlayerPos(m.data.p1Hash);
+      room.lockPlayerPos(m.data.p2Hash);
+
       break;
     }
     case 'playerHit': {
+      const room = gameRooms[m.data.roomKey];
+
+      // set player.dead to true
+      room.players[m.data.p1Hash].dead = true;
+
+      io.sockets.in(m.data.roomKey).emit('playerDead', {
+        hash: m.data.p1Hash,
+        dead: true,
+      });
       break;
     }
-    case 'playerCollide': {
+    case 'playerColliding': {
+      const room = gameRooms[m.data.roomKey];
+
+      // set both player to colliding value
+      room.playersColliding(m.data.p1Hash, m.data.p2Hash, m.data.colliding);
+
       break;
     }
     case 'deadCollide': {
+      const room = gameRooms[m.data.roomKey];
+
+      // dead players should have colliding as false
+      room.players[m.data.p1Hash].colliding = false;
+
       break;
     }
     default: {
+      console.log(`unclear type: ${m.type} from collision.js`);
       break;
     }
   }
@@ -44,7 +71,6 @@ collision.on('close', (code, signal) => {
 collision.on('exit', (code, signal) => {
   console.log(`Child exited with ${code} ${signal}`);
 });
-*/
 
 // update room data and sent data to client at set interval
 const updateRoom = (room) => {
@@ -52,13 +78,21 @@ const updateRoom = (room) => {
 
   // send message to update child process rooms
 
-  const { status, lastUpdate, players, clientBombs } = gameRooms[room];
+  const { status, lastUpdate, clientPlayers, clientBombs } = gameRooms[room];
+
+  collision.send(new Message('updateRoom', {
+    roomKey: room,
+    status,
+    lastUpdate,
+    players: clientPlayers,
+    bombs: clientBombs,
+  }));
 
   // only emit bombs, stats and player pos and score?
   io.sockets.in(room).emit('update', {
     status,
     lastUpdate,
-    players,
+    players: clientPlayers,
     bombs: clientBombs,
   });
 };
@@ -109,6 +143,11 @@ const onChangeRoom = (sock) => {
       gameRooms[data.room] = new Game(data.room);
       gameRooms[data.room].addPlayer(data.user);
 
+      collision.send(new Message('addRoom', {
+        roomKey: socket.room,
+        room: gameRooms[socket.room],
+      }));
+
       gameRooms[data.room].interval = setInterval(() => {
         updateRoom(data.room, io);
       }, 1000 / 60);
@@ -136,11 +175,22 @@ const onChangeRoom = (sock) => {
 
       gameRooms[data.room].addPlayer(data.user);
 
+      collision.send(new Message('addPlayer', {
+        roomKey: socket.room,
+        playerHash: socket.hash,
+        player: gameRooms[data.room].players[socket.hash],
+      }));
+
       socket.emit('initData', {
         status: gameRooms[data.room].status,
         dt: gameRooms[data.room].dt,
         players: gameRooms[data.room].players,
         bombs: gameRooms[data.room].bombs,
+      });
+
+      socket.broadcast.emit('addPlayer', {
+        hash: socket.hash,
+        player: gameRooms[data.room].players[socket.hash],
       });
     }
   });
@@ -189,6 +239,7 @@ const onUpdatePlayer = (sock) => {
   });
 };
 
+// TO DO EMIT BACK READY
 // toggle player's ready
 const onTogglePlayerReady = (sock) => {
   const socket = sock;
@@ -197,6 +248,11 @@ const onTogglePlayerReady = (sock) => {
     const room = gameRooms[socket.room];
 
     room.players[socket.hash].toggleReady(user);
+
+    io.sockets.in(socket.room).emit('playerReady', {
+      hash: socket.hash,
+      ready: user.ready,
+    });
   });
 };
 
@@ -213,6 +269,11 @@ const onDisconnect = (sock) => {
 
         // check if the game's room matches the socket's room
         if (game.room === socket.room) {
+          collision.send(new Message('deletePlayer', {
+            roomKey: socket.room,
+            playerHash: socket.hash,
+          }));
+
           game.deletePlayer(socket.hash);
 
           io.sockets.in(socket.room).emit('removePlayer', socket.hash);
@@ -221,6 +282,11 @@ const onDisconnect = (sock) => {
           // deletes room if no players exist in it
           if (Object.keys(game.players).length === 0) {
             clearInterval(game.interval);
+
+            collision.send(new Message('deletePlayer', {
+              roomKey: game.room,
+            }));
+
             delete gameRooms[keys[i]];
           }
         }

@@ -17,9 +17,13 @@ var refreshRooms = void 0;
 var scoreboard = void 0;
 var scoreList = void 0;
 
+// draw related
+// help keep lower spec pc move at the same speed
+var lastTime = new Date().getTime();
+var dt = 0;
+
 // game related vars
 var roomStatus = 'preparing';
-var dt = 0;
 var players = {};
 var bombs = [];
 var skills = [];
@@ -137,19 +141,19 @@ var updateMovement = function updateMovement(status) {
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -2;
+    user.destPos.y += -50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -2;
+    user.destPos.x += -50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 2;
+    user.destPos.y += 50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 2;
+    user.destPos.x += 50 * dt;
     updated = true;
   }
 
@@ -322,6 +326,11 @@ var started = function started(status) {
 
 // handles the clients draw related functions
 var handleDraw = function handleDraw() {
+  var now = new Date().getTime();
+  // in seconds
+  dt = (now - lastTime) / 1000;
+  lastTime = now;
+
   var user = players[hash];
   var userColor = 'rgb(' + user.color.r + ', ' + user.color.g + ', ' + user.color.b + ')';
 

@@ -15,9 +15,13 @@ let refreshRooms;
 let scoreboard;
 let scoreList;
 
+// draw related
+// help keep lower spec pc move at the same speed
+let lastTime = new Date().getTime();
+let dt = 0;
+
 // game related vars
 let roomStatus = 'preparing';
-let dt = 0;
 let players = {};
 let bombs = [];
 let skills = [];
@@ -131,19 +135,19 @@ const updateMovement = (status) => {
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -2;
+    user.destPos.y += -50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -2;
+    user.destPos.x += -50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 2;
+    user.destPos.y += 50 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 2;
+    user.destPos.x += 50 * dt;
     updated = true;
   }
 
@@ -311,6 +315,11 @@ const started = (status) => {
 
 // handles the clients draw related functions
 const handleDraw = () => {
+  const now = new Date().getTime();
+  // in seconds
+  dt = (now - lastTime) / 1000;
+  lastTime = now;
+
   const user = players[hash];
   const userColor = `rgb(${user.color.r}, ${user.color.g}, ${user.color.b})`;
 

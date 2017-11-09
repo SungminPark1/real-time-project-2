@@ -163,7 +163,7 @@ const updateMovement = (status) => {
   const checkY = (user.pos.y > user.destPos.y + 0.05) || (user.pos.y < user.destPos.y - 0.05);
 
   // if this client's user moves, send to server to update server
-  if (status !== 'restarting' && (updated === true || checkX || checkY)) {
+  if (status !== 'restarting' && (updated === true)) {
     socket.emit('updatePlayer', {
       pos: user.pos,
       prevPos: user.prevPos,

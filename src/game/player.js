@@ -26,7 +26,6 @@ class Player {
     this.dead = false;
 
     // skill related
-    this.skillReady = true;
     this.usedSkill = false;
     this.cooldown = 0;
   }
@@ -66,7 +65,6 @@ class Player {
     this.destPos = pos;
     this.ready = false;
     this.dead = false;
-    this.skillReady = true;
     this.usedSkill = false;
     this.cooldown = 0;
 

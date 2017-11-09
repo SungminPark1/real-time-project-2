@@ -130,19 +130,19 @@ const updateMovement = (status) => {
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -2;
+    user.destPos.y += -4;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -2;
+    user.destPos.x += -4;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 2;
+    user.destPos.y += 4;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 2;
+    user.destPos.x += 4;
     updated = true;
   }
 
@@ -163,8 +163,9 @@ const updateMovement = (status) => {
   const checkY = (user.pos.y > user.destPos.y + 0.05) || (user.pos.y < user.destPos.y - 0.05);
 
   // if this client's user moves, send to server to update server
-  if (status !== 'restarting' && (updated === true)) {
+  if (status !== 'restarting' && (updated === true || checkX || checkY)) {
     socket.emit('updatePlayer', {
+      time: new Date().getTime(),
       pos: user.pos,
       prevPos: user.prevPos,
       destPos: user.destPos,

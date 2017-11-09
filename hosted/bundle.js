@@ -137,19 +137,19 @@ var updateMovement = function updateMovement(status) {
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -100 * dt;
+    user.destPos.y += -2;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -100 * dt;
+    user.destPos.x += -2;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 100 * dt;
+    user.destPos.y += 2;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 100 * dt;
+    user.destPos.x += 2;
     updated = true;
   }
 
@@ -362,16 +362,27 @@ var updatePlayer = function updatePlayer(users, status) {
       // Move last update out of player and keep track of rooms last update?
       player.lastUpdate = updatedPlayer.lastUpdate;
 
-      player.prevPos = updatedPlayer.prevPos;
-      player.destPos = updatedPlayer.destPos;
       player.cooldown = updatedPlayer.cooldown;
-
       player.colliding = updatedPlayer.colliding;
       player.score = updatedPlayer.score;
       player.alpha = 0.05;
 
+      // only update current users pos if their colliding
+      if (player.hash === hash) {
+        if (player.colliding) {
+          // player.pos = updatedPlayer.pos;
+          player.prevPos = updatedPlayer.prevPos;
+          player.destPos = updatedPlayer.destPos;
+        }
+      } else {
+        player.prevPos = updatedPlayer.prevPos;
+        player.destPos = updatedPlayer.destPos;
+      }
+
       if (status === 'restarting') {
         player.pos = updatedPlayer.pos;
+        player.prevPos = updatedPlayer.prevPos;
+        player.destPos = updatedPlayer.destPos;
         player.dead = false;
         player.ready = false;
       }
@@ -382,7 +393,6 @@ var updatePlayer = function updatePlayer(users, status) {
 // called when server sends update
 var handleUpdate = function handleUpdate(data) {
   roomStatus = data.status;
-  dt = data.dt;
   bombs = data.bombs;
 
   updatePlayer(data.players, data.status);

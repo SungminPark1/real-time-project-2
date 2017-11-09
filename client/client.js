@@ -356,27 +356,33 @@ const updatePlayer = (users, status) => {
 
     // if player exist and last update is less than server's - update the player
     // else - do nothing
-    if (player && player.lastUpdate < updatedPlayer.lastUpdate) {
-      // Move last update out of player and keep track of rooms last update?
-      player.lastUpdate = updatedPlayer.lastUpdate;
-
+    if (player) {
+      // values that should be constantly updated
       player.cooldown = updatedPlayer.cooldown;
       player.colliding = updatedPlayer.colliding;
       player.score = updatedPlayer.score;
-      player.alpha = 0.05;
 
-      // only update current users pos if their colliding
-      if (player.hash === hash) {
-        if (player.colliding) {
-          // player.pos = updatedPlayer.pos;
+      // values that should be updated if the client emited updatedPlayer
+      if (player.lastUpdate < updatedPlayer.lastUpdate) {
+        // Move last update out of player and keep track of rooms last update?
+        player.lastUpdate = updatedPlayer.lastUpdate;
+
+        player.alpha = 0.05;
+
+        // only update current users pos if their colliding
+        if (player.hash === hash) {
+          if (player.colliding) {
+            // player.pos = updatedPlayer.pos;
+            player.prevPos = updatedPlayer.prevPos;
+            player.destPos = updatedPlayer.destPos;
+          }
+        } else {
           player.prevPos = updatedPlayer.prevPos;
           player.destPos = updatedPlayer.destPos;
         }
-      } else {
-        player.prevPos = updatedPlayer.prevPos;
-        player.destPos = updatedPlayer.destPos;
       }
 
+      // values to reset during game status 'restarting'
       if (status === 'restarting') {
         player.pos = updatedPlayer.pos;
         player.prevPos = updatedPlayer.prevPos;

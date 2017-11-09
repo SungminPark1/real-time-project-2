@@ -126,6 +126,7 @@ const updateMovement = (status) => {
   usedSkill = false;
 
   user.prevPos = user.pos;
+  user.alpha = 0.05;
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
@@ -152,8 +153,6 @@ const updateMovement = (status) => {
       updated = true;
     }
   }
-
-  user.alpha = updated ? 0.05 : user.alpha;
 
   // prevent player from going out of bound
   user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);

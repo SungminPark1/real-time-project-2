@@ -22,7 +22,6 @@ var roomStatus = 'preparing';
 var players = {};
 var bombs = [];
 var skills = [];
-var syncPos = 0;
 
 // player related vars
 var updated = false;
@@ -371,11 +370,6 @@ var updatePlayer = function updatePlayer(users, lastUpdate, status) {
       player.score = updatedPlayer.score;
       player.alpha = 0.05;
 
-      // every sec resync players position
-      if (syncPos >= 60) {
-        player.pos = updatedPlayer.pos;
-      }
-
       if (status === 'restarting') {
         player.pos = updatedPlayer.pos;
         player.dead = false;
@@ -387,16 +381,11 @@ var updatePlayer = function updatePlayer(users, lastUpdate, status) {
 
 // called when server sends update
 var handleUpdate = function handleUpdate(data) {
-  syncPos++;
   roomStatus = data.status;
 
   updatePlayer(data.players, data.lastUpdate, data.status);
 
   bombs = data.bombs;
-
-  if (syncPos >= 60) {
-    syncPos = 0;
-  }
 };
 
 var addPlayer = function addPlayer(data) {

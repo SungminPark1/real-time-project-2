@@ -20,7 +20,6 @@ let roomStatus = 'preparing';
 let players = {};
 let bombs = [];
 let skills = [];
-let syncPos = 0;
 
 // player related vars
 let updated = false;
@@ -360,11 +359,6 @@ const updatePlayer = (users, lastUpdate, status) => {
       player.score = updatedPlayer.score;
       player.alpha = 0.05;
 
-      // every sec resync players position
-      if (syncPos >= 60) {
-        player.pos = updatedPlayer.pos;
-      }
-
       if (status === 'restarting') {
         player.pos = updatedPlayer.pos;
         player.dead = false;
@@ -376,16 +370,11 @@ const updatePlayer = (users, lastUpdate, status) => {
 
 // called when server sends update
 const handleUpdate = (data) => {
-  syncPos++;
   roomStatus = data.status;
 
   updatePlayer(data.players, data.lastUpdate, data.status);
 
   bombs = data.bombs;
-
-  if (syncPos >= 60) {
-    syncPos = 0;
-  }
 };
 
 const addPlayer = (data) => {

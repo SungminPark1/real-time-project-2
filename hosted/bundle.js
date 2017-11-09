@@ -61,129 +61,7 @@ var lerpPos = function lerpPos(pos0, pos1, alpha) {
 var clamp = function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 };
-
-var updateSkills = function updateSkills() {
-  for (var i = 0; i < skills.length; i++) {
-    var skill = skills[i];
-
-    if (skill.type === 'push') {
-      skill.outerRadius += 5;
-      skill.innerRadius += 2.5;
-      skill.opacity += -0.02;
-      skill.life += -1;
-    } else if (skill.type === 'bomb') {
-      skill.outerRadius += -5;
-      skill.innerRadius += -2.5;
-      skill.opacity += 0.03;
-      skill.life += -1;
-    }
-  }
-
-  skills = skills.filter(function (skill) {
-    return skill.life > 0;
-  });
-};
-
-var drawSkills = function drawSkills() {
-  for (var i = 0; i < skills.length; i++) {
-    var skill = skills[i];
-    var x = skill.pos.x;
-    var y = skill.pos.y;
-
-    var grad = ctx.createRadialGradient(x, y, 0, x, y, skill.outerRadius);
-    grad.addColorStop(0, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', ' + skill.opacity + ')');
-    grad.addColorStop(1, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', 0)');
-
-    ctx.save();
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, skill.outerRadius, 0, Math.PI * 2, false); // outer
-    ctx.arc(x, y, skill.innerRadius, 0, Math.PI * 2, true); // inner
-    ctx.fill();
-    ctx.closePath();
-    ctx.restore();
-  }
-};
-
-// show something when skill is used
-var handleSkill = function handleSkill(data) {
-  var skill = {
-    type: data.type,
-    pos: data.pos,
-    color: {
-      r: Math.round(data.color.r * 0.75),
-      g: Math.round(data.color.g * 0.75),
-      b: Math.round(data.color.b * 0.75)
-    },
-    outerRadius: 0,
-    innerRadius: 0,
-    opacity: 0,
-    life: 30
-  };
-
-  if (skill.type === 'push') {
-    skill.opacity = 0.6;
-    skills.push(skill);
-  } else if (skill.type === 'bomb') {
-    skill.outerRadius = 150;
-    skill.innerRadius = 75;
-    skills.push(skill);
-  }
-};
-
-var updateMovement = function updateMovement(status) {
-  var user = players[hash];
-  updated = false;
-  usedSkill = false;
-
-  user.prevPos = user.pos;
-  user.alpha = 0.05;
-
-  // movement check
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -50 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -50 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 50 * dt;
-    updated = true;
-  }
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 50 * dt;
-    updated = true;
-  }
-
-  // skill check
-  if (status === 'started' && user.cooldown <= 0) {
-    if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
-      usedSkill = true;
-      updated = true;
-    }
-  }
-
-  // prevent player from going out of bound
-  user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);
-  user.destPos.y = clamp(user.destPos.y, user.radius, 500 - user.radius);
-
-  // console.log(user.pos, user.prevPos, user.destPos);
-  var checkX = user.pos.x > user.destPos.x + 0.05 || user.pos.x < user.destPos.x - 0.05;
-  var checkY = user.pos.y > user.destPos.y + 0.05 || user.pos.y < user.destPos.y - 0.05;
-
-  // if this client's user moves, send to server to update server
-  if (status !== 'restarting' && (updated === true || checkX || checkY)) {
-    socket.emit('updatePlayer', {
-      time: new Date().getTime(),
-      pos: user.pos,
-      prevPos: user.prevPos,
-      destPos: user.destPos,
-      usedSkill: usedSkill
-    });
-  }
-};
+'use strict';
 
 // draw players
 var drawPlayers = function drawPlayers() {
@@ -290,17 +168,6 @@ var drawText = function drawText(text, x) {
   ctx.fillText(text, x, y);
 };
 
-var checkReady = function checkReady() {
-  var user = players[hash];
-
-  // emit only when current keypress is down and previous is up
-  if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
-    socket.emit('togglePlayerReady', {
-      ready: !user.ready
-    });
-  }
-};
-
 // players can move and update ready status.
 var preparing = function preparing(status) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -356,61 +223,17 @@ var handleDraw = function handleDraw() {
 
   window.requestAnimationFrame(handleDraw);
 };
+'use strict';
 
-var updatePlayer = function updatePlayer(users, status) {
-  var keys = Object.keys(users);
+var checkReady = function checkReady() {
+  var user = players[hash];
 
-  // loop through players to update
-  for (var i = 0; i < keys.length; i++) {
-    var player = players[keys[i]];
-    var updatedPlayer = users[keys[i]];
-
-    // if player exist and last update is less than server's - update the player
-    // else - do nothing
-    if (player) {
-      // values that should be constantly updated
-      player.cooldown = updatedPlayer.cooldown;
-      player.colliding = updatedPlayer.colliding;
-      player.score = updatedPlayer.score;
-
-      // values that should be updated if the client emited updatedPlayer
-      if (player.lastUpdate < updatedPlayer.lastUpdate) {
-        // Move last update out of player and keep track of rooms last update?
-        player.lastUpdate = updatedPlayer.lastUpdate;
-
-        player.alpha = 0.05;
-
-        // only update current users pos if their colliding
-        if (player.hash === hash) {
-          if (player.colliding) {
-            // player.pos = updatedPlayer.pos;
-            player.prevPos = updatedPlayer.prevPos;
-            player.destPos = updatedPlayer.destPos;
-          }
-        } else {
-          player.prevPos = updatedPlayer.prevPos;
-          player.destPos = updatedPlayer.destPos;
-        }
-      }
-
-      // values to reset during game status 'restarting'
-      if (status === 'restarting') {
-        player.pos = updatedPlayer.pos;
-        player.prevPos = updatedPlayer.prevPos;
-        player.destPos = updatedPlayer.destPos;
-        player.dead = false;
-        player.ready = false;
-      }
-    }
+  // emit only when current keypress is down and previous is up
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
+    socket.emit('togglePlayerReady', {
+      ready: !user.ready
+    });
   }
-};
-
-// called when server sends update
-var handleUpdate = function handleUpdate(data) {
-  roomStatus = data.status;
-  bombs = data.bombs;
-
-  updatePlayer(data.players, data.status);
 };
 
 var addPlayer = function addPlayer(data) {
@@ -544,4 +367,185 @@ window.onload = init;
 
 window.onunload = function () {
   socket.emit('disconnect');
+};
+'use strict';
+
+var updateSkills = function updateSkills() {
+  for (var i = 0; i < skills.length; i++) {
+    var skill = skills[i];
+
+    if (skill.type === 'push') {
+      skill.outerRadius += 5;
+      skill.innerRadius += 2.5;
+      skill.opacity += -0.02;
+      skill.life += -1;
+    } else if (skill.type === 'bomb') {
+      skill.outerRadius += -5;
+      skill.innerRadius += -2.5;
+      skill.opacity += 0.03;
+      skill.life += -1;
+    }
+  }
+
+  skills = skills.filter(function (skill) {
+    return skill.life > 0;
+  });
+};
+
+var drawSkills = function drawSkills() {
+  for (var i = 0; i < skills.length; i++) {
+    var skill = skills[i];
+    var x = skill.pos.x;
+    var y = skill.pos.y;
+
+    var grad = ctx.createRadialGradient(x, y, 0, x, y, skill.outerRadius);
+    grad.addColorStop(0, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', ' + skill.opacity + ')');
+    grad.addColorStop(1, 'rgba(' + skill.color.r + ', ' + skill.color.g + ', ' + skill.color.b + ', 0)');
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, skill.outerRadius, 0, Math.PI * 2, false); // outer
+    ctx.arc(x, y, skill.innerRadius, 0, Math.PI * 2, true); // inner
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  }
+};
+
+// show something when skill is used
+var handleSkill = function handleSkill(data) {
+  var skill = {
+    type: data.type,
+    pos: data.pos,
+    color: {
+      r: Math.round(data.color.r * 0.75),
+      g: Math.round(data.color.g * 0.75),
+      b: Math.round(data.color.b * 0.75)
+    },
+    outerRadius: 0,
+    innerRadius: 0,
+    opacity: 0,
+    life: 30
+  };
+
+  if (skill.type === 'push') {
+    skill.opacity = 0.6;
+    skills.push(skill);
+  } else if (skill.type === 'bomb') {
+    skill.outerRadius = 150;
+    skill.innerRadius = 75;
+    skills.push(skill);
+  }
+};
+'use strict';
+
+var updateMovement = function updateMovement(status) {
+  var user = players[hash];
+  updated = false;
+  usedSkill = false;
+
+  user.prevPos = user.pos;
+  user.alpha = 0.05;
+
+  // movement check
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
+    user.destPos.y += -50 * dt;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
+    user.destPos.x += -50 * dt;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
+    user.destPos.y += 50 * dt;
+    updated = true;
+  }
+  if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
+    user.destPos.x += 50 * dt;
+    updated = true;
+  }
+
+  // skill check
+  if (status === 'started' && user.cooldown <= 0) {
+    if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
+      usedSkill = true;
+      updated = true;
+    }
+  }
+
+  // prevent player from going out of bound
+  user.destPos.x = clamp(user.destPos.x, user.radius, 500 - user.radius);
+  user.destPos.y = clamp(user.destPos.y, user.radius, 500 - user.radius);
+
+  // console.log(user.pos, user.prevPos, user.destPos);
+  var checkX = user.pos.x > user.destPos.x + 0.05 || user.pos.x < user.destPos.x - 0.05;
+  var checkY = user.pos.y > user.destPos.y + 0.05 || user.pos.y < user.destPos.y - 0.05;
+
+  // if this client's user moves, send to server to update server
+  if (status !== 'restarting' && (updated === true || checkX || checkY)) {
+    socket.emit('updatePlayer', {
+      time: new Date().getTime(),
+      pos: user.pos,
+      prevPos: user.prevPos,
+      destPos: user.destPos,
+      usedSkill: usedSkill
+    });
+  }
+};
+
+var updatePlayer = function updatePlayer(users, status) {
+  var keys = Object.keys(users);
+
+  // loop through players to update
+  for (var i = 0; i < keys.length; i++) {
+    var player = players[keys[i]];
+    var updatedPlayer = users[keys[i]];
+
+    // if player exist and last update is less than server's - update the player
+    // else - do nothing
+    if (player) {
+      // values that should be constantly updated
+      player.cooldown = updatedPlayer.cooldown;
+      player.colliding = updatedPlayer.colliding;
+      player.score = updatedPlayer.score;
+
+      // values that should be updated if the client emited updatedPlayer
+      if (player.lastUpdate < updatedPlayer.lastUpdate) {
+        // Move last update out of player and keep track of rooms last update?
+        player.lastUpdate = updatedPlayer.lastUpdate;
+
+        player.alpha = 0.05;
+
+        // only update current users pos if their colliding
+        if (player.hash === hash) {
+          if (player.colliding) {
+            // player.pos = updatedPlayer.pos;
+            player.prevPos = updatedPlayer.prevPos;
+            player.destPos = updatedPlayer.destPos;
+          }
+        } else {
+          player.prevPos = updatedPlayer.prevPos;
+          player.destPos = updatedPlayer.destPos;
+        }
+      }
+
+      // values to reset during game status 'restarting'
+      if (status === 'restarting') {
+        player.pos = updatedPlayer.pos;
+        player.prevPos = updatedPlayer.prevPos;
+        player.destPos = updatedPlayer.destPos;
+        player.dead = false;
+        player.ready = false;
+      }
+    }
+  }
+};
+
+// called when server sends update
+var handleUpdate = function handleUpdate(data) {
+  roomStatus = data.status;
+  bombs = data.bombs;
+
+  updatePlayer(data.players, data.status);
 };

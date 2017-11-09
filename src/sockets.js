@@ -80,7 +80,7 @@ const updateRoom = (room) => {
 
   // send message to update child process rooms
 
-  const { status, lastUpdate, clientPlayers, clientBombs } = gameRooms[room];
+  const { status, lastUpdate, dt, clientPlayers, clientBombs } = gameRooms[room];
 
   collision.send(new Message('updateRoom', {
     roomKey: room,
@@ -93,6 +93,7 @@ const updateRoom = (room) => {
   // only emit bombs, stats and player pos and score?
   io.sockets.in(room).emit('update', {
     status,
+    dt,
     players: clientPlayers,
     bombs: clientBombs,
   });

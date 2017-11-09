@@ -17,6 +17,7 @@ let scoreList;
 
 // game related vars
 let roomStatus = 'preparing';
+let dt = 0;
 let players = {};
 let bombs = [];
 let skills = [];
@@ -130,19 +131,19 @@ const updateMovement = (status) => {
 
   // movement check
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_W]) {
-    user.destPos.y += -4;
+    user.destPos.y += -100 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_A]) {
-    user.destPos.x += -4;
+    user.destPos.x += -100 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_S]) {
-    user.destPos.y += 4;
+    user.destPos.y += 100 * dt;
     updated = true;
   }
   if (myKeys.keydown[myKeys.KEYBOARD.KEY_D]) {
-    user.destPos.x += 4;
+    user.destPos.x += 100 * dt;
     updated = true;
   }
 
@@ -370,6 +371,7 @@ const updatePlayer = (users, status) => {
 // called when server sends update
 const handleUpdate = (data) => {
   roomStatus = data.status;
+  dt = data.dt;
   bombs = data.bombs;
 
   updatePlayer(data.players, data.status);

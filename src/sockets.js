@@ -232,6 +232,8 @@ const onUpdatePlayer = (sock) => {
 
     // emit location of skill used if player used a skill to animate client side
     if (room.status === 'started' && player.cooldown <= 0 && player.usedSkill) {
+      room.handleSkill(socket.hash);
+
       io.sockets.in(socket.room).emit('skillUsed', {
         type: player.dead ? 'bomb' : 'push',
         color: player.color,

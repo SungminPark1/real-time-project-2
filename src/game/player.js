@@ -47,14 +47,12 @@ class Player {
   }
 
   update(user) {
-    if (user.time > this.lastUpdate) {
-      if (!this.colliding) {
-        this.pos = user.pos;
-      }
-      this.prevPos = user.prevPos;
-      this.destPos = user.destPos;
-      this.usedSkill = user.usedSkill;
+    if (!this.colliding) {
+      this.pos = user.pos;
     }
+    this.prevPos = user.prevPos;
+    this.destPos = user.destPos;
+    this.usedSkill = user.usedSkill;
   }
 
   toggleReady(user) {

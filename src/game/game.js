@@ -102,6 +102,24 @@ class Game {
     }
   }
 
+  handleSkill(hash) {
+    const player = this.players[hash];
+
+    // skill to push bombs away
+    if (!player.dead) {
+      player.cooldown = 6;
+      player.usedSkill = false;
+
+      this.pushBombs(player.pos);
+    } else if (player.dead) {
+      // skill to place bomb
+      player.cooldown = 4;
+      player.usedSkill = false;
+
+      this.bombs.push(new Bomb(1, player.pos));
+    }
+  }
+
   // check if players are ready
   preparing() {
     const keys = Object.keys(this.players);
@@ -135,23 +153,8 @@ class Game {
       // increase score, check player collisions with other alive players
       if (!player.dead) {
         player.score++;
-
-        // skill to push bombs away
-        if (player.cooldown <= 0 && player.usedSkill) {
-          player.cooldown = 6;
-          player.usedSkill = false;
-
-          this.pushBombs(player.pos);
-        }
       } else {
         deadPlayers++;
-
-        // skill to place bomb
-        if (player.cooldown <= 0 && player.usedSkill) {
-          player.cooldown = 4;
-          this.bombs.push(new Bomb(1, player.pos));
-          player.usedSkill = false;
-        }
       }
 
       // reduce cooldown

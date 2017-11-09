@@ -347,20 +347,19 @@ var handleDraw = function handleDraw() {
   window.requestAnimationFrame(handleDraw);
 };
 
-var updatePlayer = function updatePlayer(users, lastUpdate, status) {
+var updatePlayer = function updatePlayer(users, status) {
   var keys = Object.keys(users);
 
   // loop through players to update
   for (var i = 0; i < keys.length; i++) {
     var player = players[keys[i]];
+    var updatedPlayer = users[keys[i]];
 
     // if player exist and last update is less than server's - update the player
     // else - do nothing
-    if (player && player.lastUpdate < lastUpdate) {
-      var updatedPlayer = users[keys[i]];
-
+    if (player && player.lastUpdate < updatedPlayer.lastUpdate) {
       // Move last update out of player and keep track of rooms last update?
-      player.lastUpdate = lastUpdate;
+      player.lastUpdate = updatedPlayer.lastUpdate;
 
       player.prevPos = updatedPlayer.prevPos;
       player.destPos = updatedPlayer.destPos;
@@ -382,10 +381,9 @@ var updatePlayer = function updatePlayer(users, lastUpdate, status) {
 // called when server sends update
 var handleUpdate = function handleUpdate(data) {
   roomStatus = data.status;
-
-  updatePlayer(data.players, data.lastUpdate, data.status);
-
   bombs = data.bombs;
+
+  updatePlayer(data.players, data.status);
 };
 
 var addPlayer = function addPlayer(data) {

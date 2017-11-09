@@ -93,7 +93,6 @@ const updateRoom = (room) => {
   // only emit bombs, stats and player pos and score?
   io.sockets.in(room).emit('update', {
     status,
-    lastUpdate,
     players: clientPlayers,
     bombs: clientBombs,
   });

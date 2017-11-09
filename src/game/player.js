@@ -33,10 +33,11 @@ class Player {
   // data the client needs every update
   // other data is sent when needed
   getClientData() {
-    const { hash, pos, destPos, prevPos, cooldown, score, colliding } = this;
+    const { hash, lastUpdate, pos, destPos, prevPos, cooldown, score, colliding } = this;
 
     return {
       hash,
+      lastUpdate,
       pos,
       destPos,
       prevPos,
@@ -47,6 +48,8 @@ class Player {
   }
 
   update(user) {
+    this.lastUpdate = new Date().getTime();
+
     if (!this.colliding) {
       this.pos = user.pos;
     }

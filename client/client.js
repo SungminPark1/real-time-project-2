@@ -336,20 +336,19 @@ const handleDraw = () => {
   window.requestAnimationFrame(handleDraw);
 };
 
-const updatePlayer = (users, lastUpdate, status) => {
+const updatePlayer = (users, status) => {
   const keys = Object.keys(users);
 
   // loop through players to update
   for (let i = 0; i < keys.length; i++) {
     const player = players[keys[i]];
+    const updatedPlayer = users[keys[i]];
 
     // if player exist and last update is less than server's - update the player
     // else - do nothing
-    if (player && player.lastUpdate < lastUpdate) {
-      const updatedPlayer = users[keys[i]];
-
+    if (player && player.lastUpdate < updatedPlayer.lastUpdate) {
       // Move last update out of player and keep track of rooms last update?
-      player.lastUpdate = lastUpdate;
+      player.lastUpdate = updatedPlayer.lastUpdate;
 
       player.prevPos = updatedPlayer.prevPos;
       player.destPos = updatedPlayer.destPos;
@@ -371,10 +370,9 @@ const updatePlayer = (users, lastUpdate, status) => {
 // called when server sends update
 const handleUpdate = (data) => {
   roomStatus = data.status;
-
-  updatePlayer(data.players, data.lastUpdate, data.status);
-
   bombs = data.bombs;
+
+  updatePlayer(data.players, data.status);
 };
 
 const addPlayer = (data) => {

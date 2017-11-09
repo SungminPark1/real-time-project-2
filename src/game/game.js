@@ -36,15 +36,19 @@ class Game {
   lockPlayerPos(hash) {
     const player = this.players[hash];
 
-    player.destPos = player.pos;
+    // prevents break if player disconnects
+    // due to child process being slightly off sync at times
+    if (player) player.destPos = player.pos;
   }
 
   playersColliding(p1Hash, p2Hash, colliding) {
     const player1 = this.players[p1Hash];
     const player2 = this.players[p2Hash];
 
-    player1.colliding = colliding;
-    player2.colliding = colliding;
+    // prevents break if player disconnects while colliding
+    // due to child process being slightly off sync at times
+    if (player1) player1.colliding = colliding;
+    if (player2) player2.colliding = colliding;
   }
 
   createBombs() {
@@ -78,9 +82,10 @@ class Game {
       if (!bomb.exploding) {
         const distance = utils.circlesDistance(pos, bomb.pos);
 
-        if (distance < 100) {
+        // range is 150
+        if (distance < 150) {
           // pushStr range 0 ~ 5
-          const pushStr = (100 - distance) / 20;
+          const pushStr = (150 - distance) / 30;
           const dx = bomb.pos.x - pos.x;
           const dy = bomb.pos.y - pos.y;
           const mag = Math.sqrt((dx * dx) + (dy * dy));
@@ -129,10 +134,6 @@ class Game {
 
       // increase score, check player collisions with other alive players
       if (!player.dead) {
-        // TODO handle with child process
-        // this.playerCollision(keys, i);
-        // this.bombCollision(player);
-
         player.score++;
 
         // skill to push bombs away

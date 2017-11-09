@@ -99,7 +99,11 @@ const handleSkill = (data) => {
   const skill = {
     type: data.type,
     pos: data.pos,
-    color: data.color,
+    color: {
+      r: Math.round(data.color.r * 0.75),
+      g: Math.round(data.color.g * 0.75),
+      b: Math.round(data.color.b * 0.75),
+    },
     outerRadius: 0,
     innerRadius: 0,
     opacity: 0,
@@ -143,7 +147,7 @@ const updateMovement = (status) => {
   }
 
   // skill check
-  if (status === 'started') {
+  if (status === 'started' && user.cooldown <= 0) {
     if (myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE] && !previousKeyDown) {
       usedSkill = true;
       updated = true;
@@ -177,9 +181,11 @@ const drawPlayers = (status = 'preparing') => {
     const player = players[keys[i]];
 
     // lerp players
-    if (player.alpha < 1) {
+    if (player.alpha < 1 && !player.colliding) {
       player.alpha += 0.05;
-      // console.log(player.alpha);
+    } else if (player.colliding) {
+      // prevent player from vibrating while colliding
+      player.alpha = 0;
     }
 
     player.pos = lerpPos(player.prevPos, player.destPos, player.alpha);
@@ -224,7 +230,17 @@ const drawPlayers = (status = 'preparing') => {
   ctx.fill();
   ctx.stroke();
   ctx.closePath();
+
+  // skill cooldown indicator
+  const skillTimer = user.dead ? 4 : 6;
+  const cooldown = 1 - (clamp(user.cooldown, 0, 6) / skillTimer);
+  const endAngle = (Math.PI * 2 * cooldown) - (Math.PI / 2);
+  ctx.strokeStyle = 'rgb(0, 0, 255)';
+  ctx.lineWidth = 3;
   ctx.beginPath();
+  ctx.arc(user.pos.x, user.pos.y, user.radius - 2, -Math.PI / 2, endAngle, false);
+  ctx.stroke();
+  ctx.closePath();
   ctx.restore();
 };
 
@@ -336,15 +352,17 @@ const updatePlayer = (users, lastUpdate, status) => {
 
       player.prevPos = updatedPlayer.prevPos;
       player.destPos = updatedPlayer.destPos;
+      player.cooldown = updatedPlayer.cooldown;
+
+      player.colliding = updatedPlayer.colliding;
+      player.score = updatedPlayer.score;
+      player.alpha = 0.05;
 
       if (status === 'restarting') {
         player.pos = updatedPlayer.pos;
         player.dead = false;
         player.ready = false;
       }
-
-      player.score = updatedPlayer.score;
-      player.alpha = 0.05;
     }
   }
 };

@@ -13,7 +13,7 @@ class Player {
     this.destPos = { ...this.pos };
     this.color = {
       r: utils.getRandomInt(151),
-      g: utils.getRandomInt(256),
+      g: 50 + utils.getRandomInt(201),
       b: utils.getRandomInt(256),
     };
     this.radius = 20;
@@ -26,6 +26,7 @@ class Player {
     this.dead = false;
 
     // skill related
+    this.skillReady = true;
     this.usedSkill = false;
     this.cooldown = 0;
   }
@@ -33,14 +34,16 @@ class Player {
   // data the client needs every update
   // other data is sent when needed
   getClientData() {
-    const { hash, pos, destPos, prevPos, score } = this;
+    const { hash, pos, destPos, prevPos, cooldown, score, colliding } = this;
 
     return {
       hash,
       pos,
       destPos,
       prevPos,
+      cooldown,
       score,
+      colliding,
     };
   }
 
@@ -63,6 +66,7 @@ class Player {
     this.destPos = pos;
     this.ready = false;
     this.dead = false;
+    this.skillReady = true;
     this.usedSkill = false;
     this.cooldown = 0;
 
